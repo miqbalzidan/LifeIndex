@@ -58,9 +58,27 @@ function asDay(date: string, raw: unknown): Day | null {
 }
 
 /**
- * Reads the journal back, discarding anything malformed rather than throwing.
- * A corrupt field should cost you one value, not the whole archive.
+ * Turns anything shaped roughly like a journal into a real one, discarding what
+ * is malformed rather than throwing. A corrupt field should cost you one value,
+ * not the whole archive.
+ *
+ * Used for what comes out of storage and for what comes out of an imported
+ * file: a file off someone's disk deserves exactly as much suspicion.
  */
+export function normaliseJournal(parsed: unknown): Journal {
+  if (!parsed || typeof parsed !== "object") return emptyJournal();
+  const source = (parsed as Record<string, unknown>)["days"];
+  const days: Record<string, Day> = {};
+  if (source && typeof source === "object") {
+    for (const [date, value] of Object.entries(source as Record<string, unknown>)) {
+      const day = asDay(date, value);
+      if (day) days[date] = day;
+    }
+  }
+  const skips = (parsed as Record<string, unknown>)["promptSkips"];
+  return { days, promptSkips: typeof skips === "number" && skips >= 0 ? Math.floor(skips) : 0 };
+}
+
 export function loadJournal(): Journal {
   let raw: string | null = null;
   try {
@@ -72,18 +90,7 @@ export function loadJournal(): Journal {
   if (!raw) return emptyJournal();
 
   try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object") return emptyJournal();
-    const source = (parsed as Record<string, unknown>)["days"];
-    const days: Record<string, Day> = {};
-    if (source && typeof source === "object") {
-      for (const [date, value] of Object.entries(source as Record<string, unknown>)) {
-        const day = asDay(date, value);
-        if (day) days[date] = day;
-      }
-    }
-    const skips = (parsed as Record<string, unknown>)["promptSkips"];
-    return { days, promptSkips: typeof skips === "number" && skips >= 0 ? Math.floor(skips) : 0 };
+    return normaliseJournal(JSON.parse(raw) as unknown);
   } catch {
     return emptyJournal();
   }

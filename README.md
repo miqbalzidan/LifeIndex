@@ -34,7 +34,8 @@ attaches to the day rather than the other way round.
 - **Urge log** — a bottom sheet, not a screen. Intensity, a trigger chip, two
   free-text lines, and two closing buttons of identical weight.
 - **Archive** — reverse-chronological, searchable, with an "on this day" card
-  surfacing one month and one year back.
+  surfacing one month and one year back, and, at the foot of the page, the way
+  to get a copy of the journal out and back in.
 - **Insights** — clean days as a share of the last 30, urges by hour, mood over
   time, and urges per night grouped by hours slept.
 
@@ -83,6 +84,7 @@ src/
   lib/date.ts          local-calendar dates and clock formatting
   lib/insights.ts      the four derived statistics
   lib/storage.ts       load, save, and validate what comes back
+  lib/transfer.ts      the export file, and reading one back
   lib/*.test.ts        unit tests, next to what they cover
   styles.css           design tokens and every rule in the app
 test/                  a localStorage stub and fixtures for the unit tests
@@ -108,6 +110,25 @@ tomorrow for anyone west of Greenwich.
 
 Relatedly, the app does not roll over to a new day while you have it open and
 are writing. It re-checks the date when you reopen or refocus it.
+
+### Getting a copy out
+
+There is no server, so a cleared browser or a lost phone is the end of the
+journal. The foot of the Archive writes the whole thing out as indented JSON —
+`nightly-2026-09-09.json` — carrying a `format` tag and a `version` so a file
+can be recognised, and refused, rather than half-understood by a build that
+predates it.
+
+Importing **merges**. A day the file has and this device does not is added; a
+day this device has and the file does not is kept; where both hold the same
+date, the file wins. Because that last case is the only thing in the app that
+can overwrite something already written, the import happens in two steps: it
+counts what it is about to add and replace, says so, and waits.
+
+An imported file is put through the same validators as anything coming out of
+`localStorage` — a file off someone's disk deserves exactly as much suspicion,
+and a single malformed day should cost that day rather than the import. A copy
+taken straight out of `localStorage`, with no `format` tag, still restores.
 
 ### Fonts
 

@@ -40,6 +40,8 @@ function useCurrentDate(): string {
 
 export interface JournalApi {
   days: Record<string, Day>;
+  /** The whole journal, for export. */
+  journal: Journal;
   today: Day;
   todayDate: string;
   promptSkips: number;
@@ -48,6 +50,7 @@ export interface JournalApi {
   adjustSleep: (delta: number) => void;
   logUrge: (draft: Omit<Urge, "id">) => void;
   skipPrompt: () => void;
+  replaceJournal: (next: Journal) => void;
 }
 
 export function useJournal(): JournalApi {
@@ -146,8 +149,13 @@ export function useJournal(): JournalApi {
     setJournal((prev) => ({ ...prev, promptSkips: prev.promptSkips + 1 }));
   }, []);
 
+  // Persisted by the same debounce as everything else; an import is just a
+  // large edit.
+  const replaceJournal = useCallback((next: Journal) => setJournal(next), []);
+
   return {
     days: journal.days,
+    journal,
     today,
     todayDate,
     promptSkips: journal.promptSkips,
@@ -156,5 +164,6 @@ export function useJournal(): JournalApi {
     adjustSleep,
     logUrge,
     skipPrompt,
+    replaceJournal,
   };
 }

@@ -53,7 +53,7 @@ export default function App() {
         {tab === "today" && <TodayView journal={journal} />}
         {tab === "archive" && (
           <ArchiveView
-            days={journal.days}
+            journal={journal}
             query={query}
             onQueryChange={setQuery}
             onOpen={setReaderDate}
