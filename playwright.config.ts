@@ -9,7 +9,13 @@ export default defineConfig({
   retries: process.env["CI"] ? 2 : 0,
   // Serial on CI so the shared preview server is not the bottleneck.
   ...(process.env["CI"] ? { workers: 1 } : {}),
-  reporter: process.env["CI"] ? [["github"], ["list"]] : [["list"]],
+  // The HTML reporter is what makes the CI artifact worth uploading: it is the
+  // only one that writes playwright-report/, and it carries the traces from a
+  // retried failure with it. Without it the upload step finds nothing, exactly
+  // when a failing run is the one you need to look at.
+  reporter: process.env["CI"]
+    ? [["github"], ["list"], ["html", { open: "never" }]]
+    : [["list"]],
 
   use: {
     baseURL: `http://localhost:${PORT}`,
