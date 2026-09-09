@@ -14,7 +14,9 @@ npm install
 npm run dev        # development server
 npm run build      # typecheck, bundle, and stamp the service worker
 npm run preview    # serve the built app (needed to exercise the service worker)
-npm run typecheck
+npm run typecheck  # the app, and the tests and build config
+npm test           # unit tests
+npm run test:e2e   # end-to-end tests (builds and serves the app itself)
 ```
 
 The service worker only registers over HTTPS or on `localhost`, so use
@@ -66,7 +68,10 @@ src/
   lib/date.ts          local-calendar dates and clock formatting
   lib/insights.ts      the four derived statistics
   lib/storage.ts       load, save, and validate what comes back
+  lib/*.test.ts        unit tests, next to what they cover
   styles.css           design tokens and every rule in the app
+test/                  a localStorage stub and fixtures for the unit tests
+e2e/                   Playwright specs, including the invariant suite
 public/
   sw.js                service worker (precache list stamped in at build time)
   fonts/               self-hosted Newsreader, Instrument Sans, IBM Plex Mono
@@ -96,6 +101,42 @@ a private, offline-first app and a cold start shouldn't have to announce itself
 to a third party first. `scripts/fetch-fonts.mjs` regenerates
 `public/fonts/fonts.css`, keeping the `latin` and `latin-ext` subsets and
 deduplicating the variable-font files Google serves once per weight.
+
+## Tests
+
+Unit tests sit next to the code they cover (`src/lib/*.test.ts`) and run in Node
+against a stub for `localStorage` (`test/localStorage.ts`), which also does the
+two things a real browser does and jsdom will not: refuse to be read at all
+(private mode, blocked site data) and refuse a write (out of quota). Both paths
+are ones the app is written to survive silently.
+
+The suite runs in `America/Los_Angeles` rather than UTC. Every date in this app
+is built from local components precisely so that late-evening entries file under
+the right night, and a suite run in UTC would pass whether or not that still
+held.
+
+End-to-end tests run against a real build served over HTTP, because that is the
+only place the service worker exists — `npm run build` stamps its precache list,
+so offline behaviour cannot be exercised from the dev server at all. One of the
+specs cuts the network and opens the app in a fresh page, which is the case
+installing it is for.
+
+### The invariant suite
+
+`e2e/invariants.spec.ts` covers the constraints in "Things that are deliberate".
+Those are the rules a well-meaning change undoes most easily, and the ones no
+other test would notice:
+
+- both urge outcomes render at the same size, in the same colours
+- no recognisably red colour appears anywhere on the "gave in" path — measured
+  in hue, so it can tell red from the app's own warm sand accent at 32°
+- the headline is a fraction of a fixed window, and one bad day moves it by one
+- no streak, badge, XP or congratulation vocabulary on any screen
+- empty states match their copy exactly and contain no scolding words
+- the tab bar contains no icons
+
+Each one was checked by breaking the thing it protects and confirming the test
+fails, rather than only by watching it pass.
 
 ## Where this came from
 
