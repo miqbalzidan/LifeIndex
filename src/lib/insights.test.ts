@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { day, daysBefore, journalOf, urge } from "../../test/factory.ts";
-import { CHART_WINDOW_DAYS, CLEAN_WINDOW_DAYS } from "./constants.ts";
+import { CHART_WINDOW_DAYS, CLEAN_MIN_DAYS, CLEAN_WINDOW_DAYS } from "./constants.ts";
 import {
   buildHourHistogram,
   buildMoodSeries,
   buildSleepRows,
   countCleanDays,
+  countRecordedDays,
   hourNote,
 } from "./insights.ts";
 
@@ -71,6 +72,34 @@ describe("countCleanDays", () => {
 
     expect(countCleanDays(journalOf(lastDayInside), NOW)).toBe(CLEAN_WINDOW_DAYS - 1);
     expect(countCleanDays(journalOf(firstDayOutside), NOW)).toBe(CLEAN_WINDOW_DAYS);
+  });
+});
+
+describe("countRecordedDays", () => {
+  it("is zero on a fresh install, which is why the headline waits", () => {
+    expect(countRecordedDays({}, NOW)).toBe(0);
+    // The share itself is a full 30 out of 30 at that point — honest, but not
+    // yet a measurement of anything.
+    expect(countCleanDays({}, NOW)).toBe(CLEAN_WINDOW_DAYS);
+  });
+
+  it("counts days that hold something, inside the headline window only", () => {
+    const days = journalOf(
+      day(daysBefore(0, NOW), { text: "today" }),
+      day(daysBefore(CLEAN_MIN_DAYS, NOW), { urges: [rodeOut()] }),
+      day(daysBefore(CLEAN_WINDOW_DAYS, NOW), { text: "just outside the window" })
+    );
+    expect(countRecordedDays(days, NOW)).toBe(2);
+  });
+
+  it("reaches the threshold on the day the headline should appear", () => {
+    const recent = Array.from({ length: CLEAN_MIN_DAYS }, (_, i) =>
+      day(daysBefore(i, NOW), { text: "wrote" })
+    );
+    expect(countRecordedDays(journalOf(...recent.slice(0, CLEAN_MIN_DAYS - 1)), NOW)).toBe(
+      CLEAN_MIN_DAYS - 1
+    );
+    expect(countRecordedDays(journalOf(...recent), NOW)).toBe(CLEAN_MIN_DAYS);
   });
 });
 
@@ -143,6 +172,14 @@ describe("buildSleepRows", () => {
     );
     const rows = buildSleepRows(journalOf(...nights), NOW);
     expect(rows.map((r) => r.nights)).toEqual([1, 2, 2]);
+  });
+
+  it("ignores a day whose sleep was never recorded", () => {
+    // Writing an entry without touching the sleep stepper must not add a
+    // seven-hour night to the middle bucket and pull its average down.
+    const written = journalOf(day(daysBefore(0, NOW), { text: "wrote, did not record sleep" }));
+    const rows = buildSleepRows(written, NOW);
+    expect(rows.every((r) => r.nights === 0)).toBe(true);
   });
 
   it("averages urges over the nights in the bucket", () => {

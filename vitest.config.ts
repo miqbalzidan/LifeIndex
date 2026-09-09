@@ -2,7 +2,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "test/**/*.test.ts"],
     // `src/lib` is pure logic over `Date` and `localStorage`; neither needs a
     // DOM, and a stub for the latter (test/localStorage.ts) can do the one
     // thing jsdom makes awkward — refuse to work, the way a browser in private

@@ -454,6 +454,11 @@ input::placeholder {
   color: var(--ink);
 }
 
+/* Nothing recorded yet — reads as absent rather than as a value. */
+.stepper-value--unset {
+  color: var(--ink-36);
+}
+
 /* --- today: habits -------------------------------------------------------- */
 
 .habits {

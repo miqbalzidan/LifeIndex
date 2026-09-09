@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { MoodChart } from "./MoodChart.tsx";
-import { CLEAN_WINDOW_DAYS } from "../lib/constants.ts";
+import { CLEAN_MIN_DAYS, CLEAN_WINDOW_DAYS } from "../lib/constants.ts";
 import {
   buildHourHistogram,
   buildMoodSeries,
   buildSleepRows,
   countCleanDays,
+  countRecordedDays,
   hourNote,
 } from "../lib/insights.ts";
 import type { Day } from "../types.ts";
@@ -16,6 +17,7 @@ interface InsightsViewProps {
 
 export function InsightsView({ days }: InsightsViewProps) {
   const clean = useMemo(() => countCleanDays(days), [days]);
+  const recordedDays = useMemo(() => countRecordedDays(days), [days]);
   const hours = useMemo(() => buildHourHistogram(days), [days]);
   const moods = useMemo(() => buildMoodSeries(days), [days]);
   const sleepRows = useMemo(() => buildSleepRows(days), [days]);
@@ -32,15 +34,30 @@ export function InsightsView({ days }: InsightsViewProps) {
       </header>
 
       {/* A share of the window, never a streak — this number cannot fall to
-          zero because of a single day. */}
+          zero because of a single day.
+
+          It is held back until there is enough recorded history for it to be
+          measuring anything. An empty journal is arithmetically a perfect
+          month, and opening on that reads as praise for a month that has not
+          happened. The other three panels already wait for their data; this one
+          was the only that didn't. */}
       <section className="headline">
-        <div className="headline-figure">
-          <div className="headline-value">{clean}</div>
-          <div className="headline-of">/ {CLEAN_WINDOW_DAYS}</div>
-        </div>
-        <p className="headline-note">
-          Clean days in the last {CLEAN_WINDOW_DAYS}. Counted as a share, not a streak.
-        </p>
+        {recordedDays >= CLEAN_MIN_DAYS ? (
+          <>
+            <div className="headline-figure">
+              <div className="headline-value">{clean}</div>
+              <div className="headline-of">/ {CLEAN_WINDOW_DAYS}</div>
+            </div>
+            <p className="headline-note">
+              Clean days in the last {CLEAN_WINDOW_DAYS}. Counted as a share, not a streak.
+            </p>
+          </>
+        ) : (
+          <p className="quiet-note headline-empty">
+            Clean days will show here as a share of the last {CLEAN_WINDOW_DAYS} — never a
+            streak. Not enough days recorded yet.
+          </p>
+        )}
       </section>
 
       <section className="panel">

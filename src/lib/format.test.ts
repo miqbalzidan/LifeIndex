@@ -67,13 +67,21 @@ describe("urgeDetail", () => {
 describe("entryMeta", () => {
   it("names only what is there", () => {
     expect(entryMeta(day("2026-09-09", { mood: 4, sleep: 7 }))).toBe("mood 4 · 7h");
-    expect(entryMeta(day("2026-09-09", { mood: null, sleep: 0 }))).toBe("");
+    expect(entryMeta(day("2026-09-09"))).toBe("");
     expect(entryMeta(day("2026-09-09", { mood: 2, sleep: 6.5, urges: [urge()] }))).toBe(
       "mood 2 · 6.5h · 1 urge"
     );
     expect(entryMeta(day("2026-09-09", { sleep: 8, urges: [urge(), urge()] }))).toBe(
       "8h · 2 urges"
     );
+  });
+
+  it("says nothing about sleep on a night that was never recorded", () => {
+    expect(entryMeta(day("2026-09-09", { mood: 3 }))).toBe("mood 3");
+  });
+
+  it("reports a recorded night of no sleep at all", () => {
+    expect(entryMeta(day("2026-09-09", { sleep: 0 }))).toBe("0h");
   });
 });
 
@@ -83,6 +91,11 @@ describe("readerMeta", () => {
       "mood 3/5  ·  energy 5/5  ·  7h sleep"
     );
     expect(readerMeta(day("2026-09-09", { sleep: 6 }))).toBe("6h sleep");
+  });
+
+  it("does not claim a night of sleep that was never recorded", () => {
+    expect(readerMeta(day("2026-09-09", { mood: 3 }))).toBe("mood 3/5");
+    expect(readerMeta(day("2026-09-09"))).toBe("");
   });
 });
 

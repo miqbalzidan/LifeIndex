@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { seedRecentDays } from "./support.ts";
 
 /**
  * The constraints from the brief, as tests.
@@ -98,35 +99,63 @@ test.describe("the two urge outcomes carry equal weight", () => {
   });
 
   test("there is no red anywhere on the 'gave in' path", async ({ page }) => {
-    await page.goto("/");
+    // Seeded so that every chart, the headline and the timeline are all
+    // actually drawn — an empty app has very little colour to get wrong.
+    await seedRecentDays(page, 10, {
+      mood: 3,
+      sleep: 6,
+      urges: [
+        { id: "u", t: 23 * 60, level: 4, trigger: "tired", note: "late", alt: "", outcome: "gave" },
+      ],
+    });
+    expect(await redsOnPage(page), "today").toEqual([]);
+
     await page.getByRole("button", { name: "Log urge" }).click();
     expect(await redsOnPage(page), "urge sheet").toEqual([]);
 
     await page.getByRole("button", { name: "Gave in", exact: true }).click();
-    await expect(page.locator(".timeline-item")).toHaveCount(1);
+    await expect(page.locator(".timeline-item").first()).toBeVisible();
     expect(await redsOnPage(page), "today, after giving in").toEqual([]);
 
     await page.getByRole("tab", { name: "Insights" }).click();
     await expect(page.locator(".headline-value")).toBeVisible();
-    expect(await redsOnPage(page), "insights, after giving in").toEqual([]);
+    expect(await redsOnPage(page), "insights, with every chart drawn").toEqual([]);
 
     await page.getByRole("tab", { name: "Archive" }).click();
-    await page.locator("button.entry").click();
+    await page.locator("button.entry").first().click();
     expect(await redsOnPage(page), "reader, after giving in").toEqual([]);
   });
 });
 
 test.describe("clean days is a share, never a streak", () => {
   test("the headline reads as a fraction of a fixed window", async ({ page }) => {
-    await page.goto("/");
+    await seedRecentDays(page, 10);
     await page.getByRole("tab", { name: "Insights" }).click();
 
     await expect(page.locator(".headline-of")).toHaveText("/ 30");
     await expect(page.locator(".headline-note")).toContainText("not a streak");
   });
 
-  test("a bad day moves the number by one, not to zero", async ({ page }) => {
+  test("waits for enough recorded days rather than opening on a perfect month", async ({
+    page,
+  }) => {
     await page.goto("/");
+    await page.getByRole("tab", { name: "Insights" }).click();
+    await expect(page.locator(".headline-value")).toHaveCount(0);
+    await expect(page.locator(".headline-empty")).toContainText("Not enough days recorded yet.");
+
+    // Six recorded days is still not enough; the seventh brings it in.
+    await seedRecentDays(page, 6);
+    await page.getByRole("tab", { name: "Insights" }).click();
+    await expect(page.locator(".headline-value")).toHaveCount(0);
+
+    await seedRecentDays(page, 7);
+    await page.getByRole("tab", { name: "Insights" }).click();
+    await expect(page.locator(".headline-value")).toHaveText("30");
+  });
+
+  test("a bad day moves the number by one, not to zero", async ({ page }) => {
+    await seedRecentDays(page, 10);
     await page.getByRole("tab", { name: "Insights" }).click();
     const before = Number(await page.locator(".headline-value").textContent());
 
@@ -139,7 +168,7 @@ test.describe("clean days is a share, never a streak", () => {
   });
 
   test("no gamification vocabulary anywhere in the app", async ({ page }) => {
-    await page.goto("/");
+    await seedRecentDays(page, 10);
     const banned =
       /\bstreak of\b|\bday streak\b|\bin a row\b|🔥|\bbadge|\bXP\b|level up|congratulat|well done|keep it up|you're on|don't break/i;
 
@@ -162,6 +191,9 @@ test("empty states say what a page is for and nothing about missing days", async
   );
 
   await page.getByRole("tab", { name: "Insights" }).click();
+  await expect(page.locator(".headline-empty")).toHaveText(
+    "Clean days will show here as a share of the last 30 — never a streak. Not enough days recorded yet."
+  );
   await expect(page.locator(".panel-empty")).toHaveText([
     "No urges logged yet.",
     "No moods noted yet.",

@@ -1,34 +1,11 @@
 import { expect, test } from "@playwright/test";
-
-/**
- * Puts a journal in storage before any app code runs, then loads onto it.
- *
- * Seeding after load and reloading does not work: the running app flushes its
- * own (empty) state on the way out and lands on top of the fixture.
- */
-async function seed(page: import("@playwright/test").Page, days: Record<string, unknown>) {
-  await page.addInitScript(
-    (value) => localStorage.setItem("nightly.journal.v1", value),
-    JSON.stringify({ days, promptSkips: 0 })
-  );
-  await page.goto("/");
-}
-
-const entry = (date: string, text: string) => ({
-  date,
-  text,
-  mood: 3,
-  energy: 3,
-  sleep: 7,
-  habits: [],
-  urges: [],
-});
+import { entry, seed } from "./support.ts";
 
 test("entries list newest first and open in the reader", async ({ page }) => {
   await seed(page, {
-    "2026-01-04": entry("2026-01-04", "The oldest of the three entries."),
-    "2026-02-11": entry("2026-02-11", "A middle entry about a cold walk."),
-    "2026-03-20": entry("2026-03-20", "The newest entry, about rain."),
+    "2026-01-04": entry("2026-01-04", { text: "The oldest of the three entries." }),
+    "2026-02-11": entry("2026-02-11", { text: "A middle entry about a cold walk." }),
+    "2026-03-20": entry("2026-03-20", { text: "The newest entry, about rain." }),
   });
 
   await page.getByRole("tab", { name: "Archive" }).click();
@@ -47,8 +24,8 @@ test("entries list newest first and open in the reader", async ({ page }) => {
 
 test("search narrows to matches, reports a miss, and clears", async ({ page }) => {
   await seed(page, {
-    "2026-02-11": entry("2026-02-11", "A middle entry about a cold walk."),
-    "2026-03-20": entry("2026-03-20", "The newest entry, about rain."),
+    "2026-02-11": entry("2026-02-11", { text: "A middle entry about a cold walk." }),
+    "2026-03-20": entry("2026-03-20", { text: "The newest entry, about rain." }),
   });
   await page.getByRole("tab", { name: "Archive" }).click();
 
@@ -85,8 +62,8 @@ test("'on this day' surfaces a month and a year back, and hides while searching"
   });
 
   await seed(page, {
-    [dates.month]: entry(dates.month, "One month back, a note about the garden."),
-    [dates.year]: entry(dates.year, "One year back, a note about moving house."),
+    [dates.month]: entry(dates.month, { text: "One month back, a note about the garden." }),
+    [dates.year]: entry(dates.year, { text: "One year back, a note about moving house." }),
   });
   await page.getByRole("tab", { name: "Archive" }).click();
 
@@ -100,10 +77,11 @@ test("'on this day' surfaces a month and a year back, and hides while searching"
 
 test("a day with urges but no writing is still readable", async ({ page }) => {
   await seed(page, {
-    "2026-03-20": {
-      ...entry("2026-03-20", ""),
-      urges: [{ id: "a", t: 1345, level: 4, trigger: "tired", note: "late", alt: "", outcome: "gave" }],
-    },
+    "2026-03-20": entry("2026-03-20", {
+      urges: [
+        { id: "a", t: 1345, level: 4, trigger: "tired", note: "late", alt: "", outcome: "gave" },
+      ],
+    }),
   });
   await page.getByRole("tab", { name: "Archive" }).click();
 

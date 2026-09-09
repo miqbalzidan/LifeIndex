@@ -18,7 +18,7 @@ export function urge(over: Partial<Urge> = {}): Urge {
 }
 
 export function day(date: string, over: Partial<Omit<Day, "date">> = {}): Day {
-  return { date, text: "", mood: null, energy: null, sleep: 7, habits: [], urges: [], ...over };
+  return { date, text: "", mood: null, energy: null, sleep: null, habits: [], urges: [], ...over };
 }
 
 /** A journal keyed by date, the shape the insight functions read. */

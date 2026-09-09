@@ -64,3 +64,39 @@ test("several urges in one night stay in time order", async ({ page }) => {
   await expect(page.locator(".timeline-item")).toHaveCount(2);
   await expect(page.locator(".timeline-line").first()).toContainText("first");
 });
+
+/**
+ * Both overlays set `aria-modal="true"`. Without a trap that is a claim the
+ * keyboard does not honour: Tab walks straight out through the scrim and onto
+ * the screen behind it.
+ */
+test.describe("overlays keep the keyboard inside them", () => {
+  const focusIsInside = (page: import("@playwright/test").Page, selector: string) =>
+    page.evaluate((sel) => !!document.activeElement?.closest(sel), selector);
+
+  test("tab and shift-tab both stay inside the urge sheet", async ({ page }) => {
+    await page.getByRole("button", { name: "Log urge" }).click();
+    await expect(page.locator(".sheet")).toBeVisible();
+
+    for (let i = 0; i < 20; i++) {
+      await page.keyboard.press("Tab");
+      expect(await focusIsInside(page, ".sheet"), `after ${i + 1} tabs`).toBe(true);
+    }
+    for (let i = 0; i < 20; i++) {
+      await page.keyboard.press("Shift+Tab");
+      expect(await focusIsInside(page, ".sheet"), `after ${i + 1} back-tabs`).toBe(true);
+    }
+  });
+
+  test("tab stays inside the entry reader", async ({ page }) => {
+    await page.locator("textarea.editor").fill("Something to read back.");
+    await page.getByRole("tab", { name: "Archive" }).click();
+    await page.locator("button.entry").click();
+    await expect(page.getByRole("dialog", { name: "Entry" })).toBeVisible();
+
+    for (let i = 0; i < 8; i++) {
+      await page.keyboard.press("Tab");
+      expect(await focusIsInside(page, ".reader"), `after ${i + 1} tabs`).toBe(true);
+    }
+  });
+});

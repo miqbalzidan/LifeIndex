@@ -68,8 +68,17 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(SHELL).then((cache) => cache.put("/", copy));
+          // Only bless a response that is actually the app. A 404 or a 502 from
+          // a misconfigured deploy is still a storable response, and caching it
+          // here would replace the working shell with an error page — which is
+          // then what opens, offline, until the next good load.
+          if (response.ok && response.type === "basic") {
+            const copy = response.clone();
+            caches
+              .open(SHELL)
+              .then((cache) => cache.put("/", copy))
+              .catch(() => {});
+          }
           return response;
         })
         .catch(() => caches.match("/", MATCH).then((cached) => cached || Response.error()))

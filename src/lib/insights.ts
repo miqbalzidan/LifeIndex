@@ -22,6 +22,11 @@ export function countCleanDays(days: Days, now = new Date()): number {
   }).length;
 }
 
+/** How many days in the headline window hold anything at all. */
+export function countRecordedDays(days: Days, now = new Date()): number {
+  return recorded(days, recentDates(CLEAN_WINDOW_DAYS, now)).length;
+}
+
 export interface HourHistogram {
   counts: number[];
   peakHour: number;
@@ -83,7 +88,12 @@ const SLEEP_BUCKETS: [label: string, lo: number, hi: number][] = [
 ];
 
 export function buildSleepRows(days: Days, now = new Date()): SleepRow[] {
-  const window = recorded(days, recentDates(CHART_WINDOW_DAYS, now));
+  // Only nights whose sleep was actually recorded. Counting the rest at some
+  // default would put a night the user never entered into a bucket and let it
+  // pull that bucket's average around.
+  const window = recorded(days, recentDates(CHART_WINDOW_DAYS, now)).filter(
+    (d): d is Day & { sleep: number } => d.sleep !== null
+  );
   return SLEEP_BUCKETS.map(([label, lo, hi]) => {
     const nights = window.filter((d) => d.sleep >= lo && d.sleep < hi);
     const urges = nights.reduce((sum, d) => sum + d.urges.length, 0);

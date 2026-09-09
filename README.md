@@ -47,6 +47,21 @@ undo by accident:
   days, not over days you opened the app, and a single bad day moves it by one
   rather than resetting it to zero. A day you never touched counts as clean:
   the stat measures the thing being tracked, not your attendance.
+
+  The figure is held back until seven days have been recorded. An empty journal
+  is arithmetically a perfect month, so a new install would otherwise open on
+  `30 / 30` — praise for a month that hasn't happened yet, which is the same
+  gamification the brief rules out arriving from the flattering side. The
+  arithmetic in `countCleanDays` is untouched; only whether it is shown. The
+  other three panels already waited for their data; this was the one that
+  didn't.
+
+- **Nothing is recorded that you didn't record.** Sleep is blank until it is
+  set, rather than starting at seven hours. A default written into the day is
+  indistinguishable from data: it shows up as "7h sleep" in the reader, and as
+  a seven-hour night in "sleep vs urges", for a night nobody entered. The first
+  press of either stepper button writes down the default, so recording a normal
+  night still takes one tap.
 - **"Rode it out" and "Gave in" are the same size and the same colour.** Neither
   is styled as a reward or a punishment, and there is no red anywhere on the
   "gave in" path. Logging either one is the same act.
@@ -121,6 +136,12 @@ so offline behaviour cannot be exercised from the dev server at all. One of the
 specs cuts the network and opens the app in a fresh page, which is the case
 installing it is for.
 
+`test/service-worker.test.ts` covers the worker itself, loaded the way a browser
+loads it — evaluated against a stub `self`, with the precache list stamped in as
+the build stamps it. That reaches the cases a browser test cannot stage: what
+the worker does when the network answers a navigation with a 404 or a 502, which
+it must not mistake for the app and cache over the working shell.
+
 ### The invariant suite
 
 `e2e/invariants.spec.ts` covers the constraints in "Things that are deliberate".
@@ -130,7 +151,8 @@ other test would notice:
 - both urge outcomes render at the same size, in the same colours
 - no recognisably red colour appears anywhere on the "gave in" path — measured
   in hue, so it can tell red from the app's own warm sand accent at 32°
-- the headline is a fraction of a fixed window, and one bad day moves it by one
+- the headline is a fraction of a fixed window, one bad day moves it by one, and
+  it waits for seven recorded days rather than opening on a perfect month
 - no streak, badge, XP or congratulation vocabulary on any screen
 - empty states match their copy exactly and contain no scolding words
 - the tab bar contains no icons

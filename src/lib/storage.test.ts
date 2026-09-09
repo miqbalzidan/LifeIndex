@@ -75,9 +75,16 @@ describe("field validation", () => {
     }
   });
 
-  it.each(["seven", null, NaN, Infinity])("falls back to the default sleep for %o", (sleep) => {
+  it.each(["seven", null, undefined, NaN, Infinity])("reads %o as no sleep recorded", (sleep) => {
     store({ days: { "2026-09-09": { ...day("2026-09-09"), sleep } } });
-    expect(loadDay("2026-09-09")?.sleep).toBe(DEFAULT_SLEEP);
+    expect(loadDay("2026-09-09")?.sleep).toBeNull();
+  });
+
+  it("keeps a recorded night, including a night of none at all", () => {
+    for (const sleep of [0, 6.5, DEFAULT_SLEEP, SLEEP_MAX]) {
+      store({ days: { "2026-09-09": { ...day("2026-09-09"), sleep } } });
+      expect(loadDay("2026-09-09")?.sleep).toBe(sleep);
+    }
   });
 
   it("clamps sleep to a plausible night", () => {
@@ -170,6 +177,7 @@ describe("saveJournal", () => {
 describe("dayHasContent", () => {
   it("is false for a day that has only been opened", () => {
     expect(dayHasContent(blankDay("2026-09-09"))).toBe(false);
+    expect(blankDay("2026-09-09").sleep).toBeNull();
   });
 
   it("is false for whitespace alone", () => {
@@ -183,6 +191,8 @@ describe("dayHasContent", () => {
     ["energy", { energy: 3 as const }],
     ["habits", { habits: ["Walk"] }],
     ["urges", { urges: [urge()] }],
+    ["a recorded night", { sleep: DEFAULT_SLEEP }],
+    ["a recorded night of none", { sleep: 0 }],
   ])("is true once there is %s", (_name, patch) => {
     expect(dayHasContent({ ...blankDay("2026-09-09"), ...patch })).toBe(true);
   });

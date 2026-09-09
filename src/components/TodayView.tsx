@@ -104,19 +104,31 @@ export function TodayView({ journal }: TodayViewProps) {
               type="button"
               className="stepper-button"
               onClick={() => adjustSleep(-SLEEP_STEP)}
-              disabled={today.sleep <= SLEEP_MIN}
+              disabled={today.sleep !== null && today.sleep <= SLEEP_MIN}
               aria-label="Half an hour less sleep"
             >
               –
             </button>
-            <div className="stepper-value" aria-live="polite">
-              {sleepLabel(today.sleep)}
+            {/* Blank until it is actually recorded. Showing the default here
+                would make a night nobody entered look like a night of seven
+                hours, in the reader and in the sleep chart both. */}
+            <div
+              className={today.sleep === null ? "stepper-value stepper-value--unset" : "stepper-value"}
+              aria-live="polite"
+            >
+              {today.sleep === null ? (
+                <>
+                  —<span className="sr-only">sleep not recorded</span>
+                </>
+              ) : (
+                sleepLabel(today.sleep)
+              )}
             </div>
             <button
               type="button"
               className="stepper-button"
               onClick={() => adjustSleep(SLEEP_STEP)}
-              disabled={today.sleep >= SLEEP_MAX}
+              disabled={today.sleep !== null && today.sleep >= SLEEP_MAX}
               aria-label="Half an hour more sleep"
             >
               +

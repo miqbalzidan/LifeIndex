@@ -17,7 +17,8 @@ test("an entry survives a reload", async ({ page }) => {
 test("mood, energy, sleep and habits survive a reload", async ({ page }) => {
   await page.getByRole("radio", { name: "Mood 4 of 5" }).click();
   await page.getByRole("radio", { name: "Energy 2 of 5" }).click();
-  await page.getByRole("button", { name: "Half an hour less sleep" }).click();
+  await page.getByRole("button", { name: "Half an hour less sleep" }).click(); // records 7
+  await page.getByRole("button", { name: "Half an hour less sleep" }).click(); // steps to 6.5
   await page.getByRole("button", { name: "Walk" }).click();
 
   await page.reload();
@@ -61,4 +62,42 @@ test("a day that was only opened leaves nothing behind", async ({ page }) => {
   await page.getByRole("tab", { name: "Archive" }).click();
   await expect(page.locator("button.entry")).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem("nightly.journal.v1"))).toBeNull();
+});
+
+test.describe("sleep is recorded, not assumed", () => {
+  test("stays blank until a night is actually entered", async ({ page }) => {
+    const value = page.locator(".stepper-value");
+    await expect(value).toContainText("—");
+
+    // The first press writes down the default rather than stepping away from it.
+    await page.getByRole("button", { name: "Half an hour more sleep" }).click();
+    await expect(value).toContainText("7 h");
+    await page.getByRole("button", { name: "Half an hour more sleep" }).click();
+    await expect(value).toContainText("7.5 h");
+
+    await page.reload();
+    await expect(page.locator(".stepper-value")).toContainText("7.5 h");
+  });
+
+  test("an entry with no sleep entered adds no night to the sleep chart", async ({ page }) => {
+    await page.locator("textarea.editor").fill("Wrote tonight, never touched the stepper.");
+
+    await page.getByRole("tab", { name: "Insights" }).click();
+    await expect(page.locator(".panel").last()).toContainText("Not enough nights recorded yet.");
+
+    // And the reader does not claim a night of seven hours either.
+    await page.getByRole("tab", { name: "Archive" }).click();
+    await page.locator("button.entry").click();
+    await expect(page.getByRole("dialog", { name: "Entry" }).locator(".reader-meta")).toHaveText("");
+  });
+
+  test("a recorded night does reach the chart", async ({ page }) => {
+    await page.getByRole("button", { name: "Half an hour less sleep" }).click(); // 7
+    await page.getByRole("button", { name: "Half an hour less sleep" }).click(); // 6.5
+
+    await page.getByRole("tab", { name: "Insights" }).click();
+    const sleepPanel = page.locator(".panel").last();
+    await expect(sleepPanel).not.toContainText("Not enough nights recorded yet.");
+    await expect(sleepPanel.locator(".sleep-row")).toHaveCount(3);
+  });
 });

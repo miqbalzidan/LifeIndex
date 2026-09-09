@@ -27,7 +27,7 @@ export function urgeDetail(u: Urge): string {
 export function entryMeta(day: Day): string {
   return [
     day.mood ? `mood ${day.mood}` : null,
-    day.sleep ? `${day.sleep}h` : null,
+    day.sleep !== null ? `${day.sleep}h` : null,
     day.urges.length ? `${day.urges.length} ${plural(day.urges.length, "urge")}` : null,
   ]
     .filter(Boolean)
@@ -38,7 +38,7 @@ export function readerMeta(day: Day): string {
   return [
     day.mood ? `mood ${day.mood}/5` : null,
     day.energy ? `energy ${day.energy}/5` : null,
-    `${day.sleep}h sleep`,
+    day.sleep !== null ? `${day.sleep}h sleep` : null,
   ]
     .filter(Boolean)
     .join("  ·  ");

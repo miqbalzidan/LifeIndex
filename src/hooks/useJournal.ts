@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { blankDay, dayHasContent, loadJournal, saveJournal } from "../lib/storage.ts";
+import { DEFAULT_SLEEP, SLEEP_MAX, SLEEP_MIN } from "../lib/constants.ts";
 import { todayIso } from "../lib/date.ts";
 import type { Day, Journal, Urge } from "../types.ts";
 
@@ -119,9 +120,15 @@ export function useJournal(): JournalApi {
   const adjustSleep = useCallback(
     (delta: number) =>
       updateToday((day) => ({
-        // Re-round to the half hour so repeated steps can't accumulate float drift.
         ...day,
-        sleep: Math.round((day.sleep + delta) * 2) / 2,
+        // From unrecorded, the first press writes down the default rather than
+        // stepping away from it: about seven hours is the common night, and it
+        // shouldn't take two presses to record. After that it steps, re-rounded
+        // to the half hour so repeated presses can't accumulate float drift.
+        sleep:
+          day.sleep === null
+            ? DEFAULT_SLEEP
+            : Math.max(SLEEP_MIN, Math.min(SLEEP_MAX, Math.round((day.sleep + delta) * 2) / 2)),
       })),
     [updateToday]
   );

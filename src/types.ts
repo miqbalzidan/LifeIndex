@@ -20,8 +20,8 @@ export interface Day {
   text: string;
   mood: Rating | null;
   energy: Rating | null;
-  /** Hours, in half-hour steps. */
-  sleep: number;
+  /** Hours, in half-hour steps, or `null` if it was never recorded. */
+  sleep: number | null;
   habits: string[];
   urges: Urge[];
 }

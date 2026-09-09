@@ -1,4 +1,4 @@
-import { DEFAULT_SLEEP, SLEEP_MAX, SLEEP_MIN } from "./constants.ts";
+import { SLEEP_MAX, SLEEP_MIN } from "./constants.ts";
 import type { Day, Journal, Outcome, Rating, Urge } from "../types.ts";
 
 /**
@@ -10,7 +10,7 @@ const KEY = "nightly.journal.v1";
 export const emptyJournal = (): Journal => ({ days: {}, promptSkips: 0 });
 
 export function blankDay(date: string): Day {
-  return { date, text: "", mood: null, energy: null, sleep: DEFAULT_SLEEP, habits: [], urges: [] };
+  return { date, text: "", mood: null, energy: null, sleep: null, habits: [], urges: [] };
 }
 
 const isRating = (v: unknown): v is Rating => v === 1 || v === 2 || v === 3 || v === 4 || v === 5;
@@ -39,13 +39,17 @@ function asDay(date: string, raw: unknown): Day | null {
   if (!raw || typeof raw !== "object") return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const d = raw as Record<string, unknown>;
-  const sleep = typeof d["sleep"] === "number" && Number.isFinite(d["sleep"]) ? d["sleep"] : DEFAULT_SLEEP;
+  const rawSleep = d["sleep"];
+  const sleep =
+    typeof rawSleep === "number" && Number.isFinite(rawSleep)
+      ? Math.max(SLEEP_MIN, Math.min(SLEEP_MAX, rawSleep))
+      : null;
   return {
     date,
     text: asString(d["text"]),
     mood: asRating(d["mood"]),
     energy: asRating(d["energy"]),
-    sleep: Math.max(SLEEP_MIN, Math.min(SLEEP_MAX, sleep)),
+    sleep,
     habits: Array.isArray(d["habits"]) ? d["habits"].filter((h): h is string => typeof h === "string") : [],
     urges: Array.isArray(d["urges"])
       ? d["urges"].map(asUrge).filter((u): u is Urge => u !== null).sort((a, b) => a.t - b.t)
@@ -102,6 +106,6 @@ export function dayHasContent(day: Day): boolean {
     day.energy !== null ||
     day.habits.length > 0 ||
     day.urges.length > 0 ||
-    day.sleep !== DEFAULT_SLEEP
+    day.sleep !== null
   );
 }
