@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#0e0d0c;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#e0b98d}a:hover{color:#f0d3b2}
+textarea,input,button{font-family:inherit}
+textarea::placeholder,input::placeholder{color:rgba(239,236,229,.30)}
+@keyframes sheetUp{from{transform:translateY(24px);opacity:.4}to{transform:translateY(0);opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes riseIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</helmet>
+
+<div style="width:100%;min-height:100vh;background:#0e0d0c;color:#efece5;font-family:'Instrument Sans',system-ui,sans-serif;padding-bottom:190px">
+<div style="max-width:430px;margin:0 auto;padding:0 22px">
+
+<sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+<div style="animation:fadeIn .3s ease">
+  <div style="padding:38px 0 26px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(239,236,229,.40)">{{ weekday }}</div>
+    <div style="font-family:'Newsreader',serif;font-size:40px;line-height:1.05;font-weight:400;letter-spacing:-.01em;margin-top:8px">{{ dateLong }}</div>
+  </div>
+
+  <sc-if value="{{ promptShown }}" hint-placeholder-val="{{ true }}">
+  <div style="display:flex;align-items:flex-start;gap:12px;padding:0 0 14px">
+    <div style="font-family:'Newsreader',serif;font-style:italic;font-size:16.5px;line-height:1.5;color:rgba(239,236,229,.52);flex:1">{{ prompt }}</div>
+    <button onClick="{{ nextPrompt }}" style="background:none;border:none;padding:2px 0;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(239,236,229,.32)" style-hover="color:rgba(239,236,229,.6)">skip</button>
+  </div>
+  </sc-if>
+
+  <textarea value="{{ text }}" onInput="{{ onText }}" ref="{{ taRef }}" placeholder="Write as much or as little as you like." rows="4" style="width:100%;min-height:150px;background:none;border:none;outline:none;resize:none;color:#efece5;font-family:'Newsreader',serif;font-size:19px;line-height:1.62;padding:0;overflow:hidden;caret-color:#e0b98d"></textarea>
+
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:rgba(239,236,229,.26);padding:10px 0 0">{{ wordCount }}</div>
+
+  <sc-if value="{{ hasUrgesToday }}" hint-placeholder-val="{{ true }}">
+  <div style="margin-top:26px;padding-left:9px;border-left:1px solid rgba(239,236,229,.13)">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(239,236,229,.34);padding:0 0 12px 9px">Today's urges</div>
+    <sc-for list="{{ urgesToday }}" as="u" hint-placeholder-count="2">
+      <div style="position:relative;padding:0 0 16px 18px">
+        <div style="position:absolute;left:-13px;top:5px;width:7px;height:7px;border-radius:50%;background:#0e0d0c;border:1px solid rgba(239,236,229,.45)" style-hover="border-color:#e0b98d"></div>
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:rgba(239,236,229,.75)">{{ u.time }}</span>
+          <span style="font-size:13px;color:rgba(239,236,229,.5)">{{ u.trigger }}</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(239,236,229,.38);margin-left:auto">{{ u.level }}</span>
+        </div>
+        <div style="font-size:13.5px;line-height:1.5;color:rgba(239,236,229,.62);margin-top:4px">{{ u.line }}</div>
+      </div>
+    </sc-for>
+  </div>
+  </sc-if>
+
+  <div style="height:1px;background:rgba(239,236,229,.09);margin:30px 0 24px"></div>
+
+  <div style="display:flex;flex-direction:column;gap:22px">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div style="font-size:13.5px;color:rgba(239,236,229,.6);width:56px;flex:none">Mood</div>
+      <div style="display:flex;gap:8px;flex:1">
+        <sc-for list="{{ moodScale }}" as="m" hint-placeholder-count="5">
+          <button onClick="{{ m.set }}" style="flex:1;height:44px;border-radius:3px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid {{ m.bd }};background:{{ m.bg }};color:{{ m.fg }}">{{ m.v }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div style="font-size:13.5px;color:rgba(239,236,229,.6);width:56px;flex:none">Energy</div>
+      <div style="display:flex;gap:8px;flex:1">
+        <sc-for list="{{ energyScale }}" as="m" hint-placeholder-count="5">
+          <button onClick="{{ m.set }}" style="flex:1;height:44px;border-radius:3px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid {{ m.bd }};background:{{ m.bg }};color:{{ m.fg }}">{{ m.v }}</button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div style="font-size:13.5px;color:rgba(239,236,229,.6);width:56px;flex:none">Sleep</div>
+      <div style="display:flex;align-items:center;gap:6px;flex:1;justify-content:flex-end">
+        <button onClick="{{ sleepDown }}" style="width:44px;height:44px;border-radius:3px;border:1px solid rgba(239,236,229,.14);background:none;color:rgba(239,236,229,.7);font-size:17px;cursor:pointer" style-hover="border-color:rgba(239,236,229,.34)">–</button>
+        <div style="min-width:78px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:15px;color:#efece5">{{ sleepLabel }}</div>
+        <button onClick="{{ sleepUp }}" style="width:44px;height:44px;border-radius:3px;border:1px solid rgba(239,236,229,.14);background:none;color:rgba(239,236,229,.7);font-size:17px;cursor:pointer" style-hover="border-color:rgba(239,236,229,.34)">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:26px">
+    <sc-for list="{{ habitList }}" as="h" hint-placeholder-count="4">
+      <button onClick="{{ h.toggle }}" style="display:flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:17px;cursor:pointer;font-size:12.5px;border:1px solid {{ h.bd }};background:{{ h.bg }};color:{{ h.fg }}">
+        <span style="width:5px;height:5px;border-radius:50%;background:{{ h.dot }}"></span>{{ h.name }}
+      </button>
+    </sc-for>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isArchive }}" hint-placeholder-val="{{ false }}">
+<div style="animation:fadeIn .3s ease">
+  <div style="padding:38px 0 20px">
+    <div style="font-family:'Newsreader',serif;font-size:32px;font-weight:400;letter-spacing:-.01em">Archive</div>
+  </div>
+  <input value="{{ q }}" onInput="{{ onSearch }}" placeholder="Search entries" style="width:100%;height:46px;background:#171614;border:1px solid rgba(239,236,229,.09);border-radius:4px;outline:none;color:#efece5;font-size:14.5px;padding:0 14px" style-focus="border-color:rgba(224,185,141,.5)">
+
+  <sc-if value="{{ showOnThisDay }}" hint-placeholder-val="{{ true }}">
+  <div style="margin-top:22px;border:1px solid rgba(239,236,229,.1);border-radius:5px;padding:16px 16px 6px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(224,185,141,.72)">On this day</div>
+    <sc-for list="{{ onThisDay }}" as="o" hint-placeholder-count="2">
+      <div style="padding:14px 0 12px;border-bottom:1px solid rgba(239,236,229,.07)">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(239,236,229,.4)">{{ o.ago }} · {{ o.date }}</div>
+        <div style="font-family:'Newsreader',serif;font-size:16px;line-height:1.55;color:rgba(239,236,229,.86);margin-top:6px">{{ o.snippet }}</div>
+      </div>
+    </sc-for>
+  </div>
+  </sc-if>
+
+  <div style="margin-top:26px">
+    <sc-for list="{{ entryList }}" as="e" hint-placeholder-count="6">
+      <div onClick="{{ e.open }}" style="padding:18px 0;border-top:1px solid rgba(239,236,229,.08);cursor:pointer">
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <div style="font-family:'Newsreader',serif;font-size:19px;color:#efece5">{{ e.date }}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(239,236,229,.34)">{{ e.weekday }}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(239,236,229,.34);margin-left:auto">{{ e.meta }}</div>
+        </div>
+        <div style="font-family:'Newsreader',serif;font-size:16px;line-height:1.6;color:rgba(239,236,229,.7);margin-top:8px">{{ e.body }}</div>
+      </div>
+    </sc-for>
+    <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:40px 0;font-family:'Newsreader',serif;font-style:italic;font-size:16px;color:rgba(239,236,229,.42)">Nothing here for that word. Try another.</div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isInsights }}" hint-placeholder-val="{{ false }}">
+<div style="animation:fadeIn .3s ease">
+  <div style="padding:38px 0 8px">
+    <div style="font-family:'Newsreader',serif;font-size:32px;font-weight:400;letter-spacing:-.01em">Insights</div>
+  </div>
+
+  <div style="padding:26px 0 30px;border-bottom:1px solid rgba(239,236,229,.09)">
+    <div style="display:flex;align-items:flex-end;gap:6px">
+      <div style="font-family:'Newsreader',serif;font-size:64px;line-height:.9;color:#efece5">{{ cleanDays }}</div>
+      <div style="font-family:'Newsreader',serif;font-size:30px;line-height:1;color:rgba(239,236,229,.36)">/ 30</div>
+    </div>
+    <div style="font-size:13.5px;color:rgba(239,236,229,.58);margin-top:12px;max-width:280px;line-height:1.5">Clean days in the last 30. Counted as a share, not a streak.</div>
+  </div>
+
+  <div style="padding:28px 0 30px;border-bottom:1px solid rgba(239,236,229,.09)">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(239,236,229,.4)">Urges by hour</div>
+    <div style="display:flex;align-items:flex-end;gap:2px;height:96px;margin-top:20px">
+      <sc-for list="{{ hourBars }}" as="b" hint-placeholder-count="24">
+        <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%">
+          <div style="height:{{ b.h }};background:{{ b.c }};border-radius:1px;min-height:1px"></div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(239,236,229,.3);margin-top:8px">
+      <span>00</span><span>06</span><span>12</span><span>18</span><span>23</span>
+    </div>
+    <div style="font-size:13px;color:rgba(239,236,229,.5);margin-top:14px;line-height:1.5">{{ hourNote }}</div>
+  </div>
+
+  <div style="padding:28px 0 30px;border-bottom:1px solid rgba(239,236,229,.09)">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(239,236,229,.4)">Mood · last 30 days</div>
+    <div style="margin-top:18px">{{ moodChart }}</div>
+    <div style="display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(239,236,229,.3);margin-top:8px">
+      <span>30d ago</span><span>today</span>
+    </div>
+  </div>
+
+  <div style="padding:28px 0 20px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:rgba(239,236,229,.4)">Sleep vs urges</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px">
+      <sc-for list="{{ sleepRows }}" as="r" hint-placeholder-count="5">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(239,236,229,.5);width:46px;flex:none">{{ r.label }}</div>
+          <div style="flex:1;height:8px;background:rgba(239,236,229,.06);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:{{ r.w }};background:{{ r.c }};border-radius:4px"></div>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:rgba(239,236,229,.62);width:34px;text-align:right;flex:none">{{ r.val }}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-size:13px;color:rgba(239,236,229,.5);margin-top:18px;line-height:1.5">Average urges per night, grouped by hours slept.</div>
+  </div>
+</div>
+</sc-if>
+
+</div>
+
+<sc-if value="{{ readerOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;background:#0e0d0c;z-index:60;overflow-y:auto;animation:fadeIn .18s ease">
+  <div style="max-width:430px;margin:0 auto;padding:26px 22px 80px">
+    <button onClick="{{ closeReader }}" style="background:none;border:none;padding:0;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(239,236,229,.45)" style-hover="color:#efece5">← Archive</button>
+    <div style="font-family:'Newsreader',serif;font-size:32px;margin-top:26px;letter-spacing:-.01em">{{ reader.date }}</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(239,236,229,.36);margin-top:8px">{{ reader.meta }}</div>
+    <div style="font-family:'Newsreader',serif;font-size:19px;line-height:1.65;color:rgba(239,236,229,.92);margin-top:26px;white-space:pre-wrap">{{ reader.text }}</div>
+    <sc-if value="{{ reader.hasUrges }}" hint-placeholder-val="{{ false }}">
+    <div style="margin-top:32px;padding-top:22px;border-top:1px solid rgba(239,236,229,.09)">
+      <sc-for list="{{ reader.urges }}" as="u" hint-placeholder-count="1">
+        <div style="display:flex;gap:12px;padding:8px 0;font-size:13.5px;color:rgba(239,236,229,.62)">
+          <span style="font-family:'IBM Plex Mono',monospace;color:rgba(239,236,229,.8)">{{ u.time }}</span>
+          <span>{{ u.line }}</span>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ sheetOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center">
+  <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(6,6,5,.72);animation:fadeIn .2s ease"></div>
+  <div style="position:relative;width:100%;max-width:430px;background:#171614;border-top:1px solid rgba(239,236,229,.1);border-radius:14px 14px 0 0;padding:18px 22px 26px;animation:sheetUp .26s cubic-bezier(.22,.7,.2,1);max-height:92vh;overflow-y:auto">
+    <div style="width:34px;height:3px;border-radius:2px;background:rgba(239,236,229,.18);margin:0 auto 20px"></div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between">
+      <div style="font-family:'Newsreader',serif;font-size:22px">Log an urge</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:rgba(239,236,229,.4)">{{ nowTime }}</div>
+    </div>
+
+    <div style="margin-top:24px">
+      <div style="font-size:12.5px;color:rgba(239,236,229,.5)">Intensity</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <sc-for list="{{ intensityScale }}" as="i" hint-placeholder-count="5">
+          <button onClick="{{ i.set }}" style="flex:1;height:46px;border-radius:3px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:13px;border:1px solid {{ i.bd }};background:{{ i.bg }};color:{{ i.fg }}">{{ i.v }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="margin-top:24px">
+      <div style="font-size:12.5px;color:rgba(239,236,229,.5)">Trigger</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:10px">
+        <sc-for list="{{ triggerChips }}" as="t" hint-placeholder-count="6">
+          <button onClick="{{ t.set }}" style="height:36px;padding:0 14px;border-radius:18px;cursor:pointer;font-size:13px;border:1px solid {{ t.bd }};background:{{ t.bg }};color:{{ t.fg }}">{{ t.name }}</button>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;display:flex;flex-direction:column;gap:14px">
+      <input value="{{ sheetNote }}" onInput="{{ onSheetNote }}" placeholder="What was going on?" style="width:100%;height:46px;background:none;border:none;border-bottom:1px solid rgba(239,236,229,.13);outline:none;color:#efece5;font-family:'Newsreader',serif;font-size:16.5px;padding:0" style-focus="border-color:rgba(224,185,141,.55)">
+      <input value="{{ sheetAlt }}" onInput="{{ onSheetAlt }}" placeholder="What you did instead" style="width:100%;height:46px;background:none;border:none;border-bottom:1px solid rgba(239,236,229,.13);outline:none;color:#efece5;font-family:'Newsreader',serif;font-size:16.5px;padding:0" style-focus="border-color:rgba(224,185,141,.55)">
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:28px">
+      <button onClick="{{ saveRode }}" style="flex:1;height:52px;border-radius:4px;cursor:pointer;font-size:14.5px;color:#efece5;background:rgba(239,236,229,.07);border:1px solid rgba(239,236,229,.18)" style-hover="background:rgba(239,236,229,.12)">Rode it out</button>
+      <button onClick="{{ saveGave }}" style="flex:1;height:52px;border-radius:4px;cursor:pointer;font-size:14.5px;color:#efece5;background:rgba(239,236,229,.07);border:1px solid rgba(239,236,229,.18)" style-hover="background:rgba(239,236,229,.12)">Gave in</button>
+    </div>
+    <button onClick="{{ closeSheet }}" style="width:100%;background:none;border:none;margin-top:14px;padding:8px;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:rgba(239,236,229,.34)" style-hover="color:rgba(239,236,229,.6)">Close without saving</button>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ fabVisible }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ openSheet }}" style="position:fixed;bottom:88px;right:max(18px, calc(50% - 193px));z-index:50;height:44px;padding:0 17px;border-radius:24px;cursor:pointer;background:#e0b98d;color:#171512;border:none;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:500;letter-spacing:.01em;box-shadow:0 8px 26px rgba(0,0,0,.55)" style-hover="background:#eccca6">Log urge</button>
+</sc-if>
+
+<div style="position:fixed;bottom:0;left:0;right:0;z-index:40;background:rgba(14,13,12,.92);backdrop-filter:blur(14px);border-top:1px solid rgba(239,236,229,.08)">
+  <div style="max-width:430px;margin:0 auto;display:flex;padding:0 22px">
+    <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+      <button onClick="{{ t.go }}" style="flex:1;height:62px;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:{{ t.fg }}">
+        {{ t.name }}
+        <span style="width:14px;height:1px;background:{{ t.mark }}"></span>
+      </button>
+    </sc-for>
+  </div>
+</div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844}}">
+const PROMPTS = [
+  "What did today ask of you that you didn't expect?",
+  "Where did your attention go when you weren't watching it?",
+  "Name one thing you'd rather not write down.",
+  "What felt easier today than it did last month?",
+  "Who were you around, and how did it leave you?",
+  "What were you avoiding at 9pm?",
+  "Describe the last hour before you sat down here."
+];
+const HABITS = ["Walk", "Read", "No phone in bed", "Water"];
+const TRIGGERS = ["tired", "bored", "alone", "stressed", "scrolling", "other"];
+const SEEDS = [
+  "Long day but a quiet one. Worked through the afternoon without checking anything, which used to be impossible.",
+  "Slept badly and it showed by four. Went for the walk anyway and it took the edge off more than I expected.",
+  "Dinner with M. Talked about the move. I noticed I wasn't rehearsing what to say next, just listening.",
+  "Nothing much. Read forty pages and went to bed early. Days like this are the point, probably.",
+  "Restless from about nine. Sat with it for twenty minutes and it passed like weather.",
+  "Good work morning, thin afternoon. I keep trying to make the whole day one texture and it never is.",
+  "Called home. Felt the old tightness in my chest and then it eased. Wrote nothing for two days before this and don't feel bad about it.",
+  "Rain all day. Made soup, cleaned the desk, watched the light go. Steady.",
+  "Hard evening. Bored more than anything, which is the one I trust least.",
+  "Woke at five and couldn't get back. Used the extra hour instead of resenting it."
+];
+function rnd(seed) { let s = seed; return () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; }; }
+function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function parse(s) { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); }
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const saved = this.load();
+    this.state = saved || {
+      tab: "today", days: this.seed(), promptIdx: 0, promptShown: true,
+      q: "", readerId: null, sheetOpen: false,
+      sheetLevel: 3, sheetTrigger: null, sheetNote: "", sheetAlt: ""
+    };
+    this.ta = null;
+  }
+  load() {
+    try {
+      const raw = localStorage.getItem("nightly.v3");
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!s.days || !s.days.length) return null;
+      if (!s.days.find(d => d.date === iso(new Date()))) s.days.unshift(this.blank(iso(new Date())));
+      return Object.assign(s, { sheetOpen: false, readerId: null, tab: s.tab || "today" });
+    } catch (e) { return null; }
+  }
+  save() {
+    try { localStorage.setItem("nightly.v3", JSON.stringify(this.state)); } catch (e) {}
+  }
+  componentDidUpdate() { this.save(); }
+  componentDidMount() { this.grow(); }
+  blank(date) { return { date, text: "", mood: null, energy: null, sleep: 7, habits: [], urges: [] }; }
+
+  seed() {
+    const r = rnd(20260908);
+    const days = [];
+    const today = new Date();
+    for (let i = 0; i < 400; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+      const skip = i > 0 && r() < 0.18;
+      const sleep = Math.round((4 + (r() + r()) * 2.5) * 2) / 2;
+      const pressure = Math.max(0.04, Math.min(0.95, (7.6 - sleep) * 0.3 + 0.16));
+      let nUrge = 0;
+      if (i > 0) { if (r() < pressure) nUrge++; if (r() < pressure * 0.55) nUrge++; }
+      const urges = [];
+      for (let k = 0; k < nUrge; k++) {
+        const late = r() < 0.62;
+        const h = late ? 21 + Math.floor(r() * 3) % 3 : Math.floor(r() * 20);
+        urges.push({
+          t: (h % 24) * 60 + Math.floor(r() * 60),
+          level: 1 + Math.floor(r() * 5),
+          trigger: TRIGGERS[Math.floor(r() * TRIGGERS.length)],
+          note: "", alt: "", outcome: r() < 0.72 ? "rode" : "gave"
+        });
+      }
+      urges.sort((a, b) => a.t - b.t);
+      days.push({
+        date: iso(d),
+        text: i === 0 ? "" : (skip ? "" : SEEDS[Math.floor(r() * SEEDS.length)]),
+        mood: i === 0 ? null : (skip ? null : 2 + Math.floor(r() * 4)),
+        energy: i === 0 ? null : (skip ? null : 1 + Math.floor(r() * 5)),
+        sleep, habits: HABITS.filter(() => r() < 0.5), urges
+      });
+    }
+    days[0].urges = [{ t: 22 * 60 + 14, level: 3, trigger: "tired", note: "Finished late, house quiet.", alt: "Made tea and came here.", outcome: "rode" }];
+    return days;
+  }
+
+  today() { return this.state.days.find(d => d.date === iso(new Date())) || this.state.days[0]; }
+  patchToday(patch) {
+    this.setState(s => ({ days: s.days.map(d => d.date === this.today().date ? Object.assign({}, d, patch) : d) }));
+  }
+  grow() {
+    const el = this.ta;
+    if (el) { el.style.height = "auto"; el.style.height = Math.max(150, el.scrollHeight) + "px"; }
+  }
+  fmtTime(mins) {
+    const h = Math.floor(mins / 60) % 24, m = mins % 60;
+    const ap = h >= 12 ? "pm" : "am", hh = h % 12 === 0 ? 12 : h % 12;
+    return hh + ":" + String(m).padStart(2, "0") + ap;
+  }
+  urgeLine(u) {
+    const bits = [];
+    if (u.note) bits.push(u.note);
+    if (u.alt) bits.push(u.alt);
+    bits.push(u.outcome === "rode" ? "Rode it out." : "Gave in.");
+    return bits.join(" ");
+  }
+  scale(cur, setter) {
+    return [1, 2, 3, 4, 5].map(v => ({
+      v, set: () => setter(v),
+      bg: cur === v ? "rgba(224,185,141,.16)" : "transparent",
+      bd: cur === v ? "rgba(224,185,141,.6)" : "rgba(239,236,229,.13)",
+      fg: cur === v ? "#f0d3b2" : "rgba(239,236,229,.5)"
+    }));
+  }
+  dateFmt(s, opts) { return parse(s).toLocaleDateString("en-US", opts); }
+
+  renderVals() {
+    const st = this.state, t = this.today();
+    const tabs = [["today", "Today"], ["archive", "Archive"], ["insights", "Insights"]].map(([k, name]) => ({
+      name, go: () => this.setState({ tab: k, readerId: null }),
+      fg: st.tab === k ? "#efece5" : "rgba(239,236,229,.34)",
+      mark: st.tab === k ? "#e0b98d" : "transparent"
+    }));
+
+    // archive
+    const q = st.q.trim().toLowerCase();
+    const written = st.days.filter(d => d.text || d.urges.length);
+    const filtered = (q ? written.filter(d => d.text.toLowerCase().includes(q)) : written).slice(0, 40);
+    const entryList = filtered.map(d => ({
+      date: this.dateFmt(d.date, { month: "long", day: "numeric" }),
+      weekday: this.dateFmt(d.date, { weekday: "short" }),
+      meta: [d.mood ? "mood " + d.mood : null, d.sleep ? d.sleep + "h" : null, d.urges.length ? d.urges.length + " urge" + (d.urges.length > 1 ? "s" : "") : null].filter(Boolean).join(" · "),
+      body: d.text ? (d.text.length > 120 ? d.text.slice(0, 118) + "…" : d.text) : "No entry — " + d.urges.length + " urge logged.",
+      open: () => this.setState({ readerId: d.date })
+    }));
+
+    const ago = (months) => {
+      const now = new Date();
+      const target = iso(new Date(now.getFullYear(), now.getMonth() - months, now.getDate()));
+      const d = st.days.find(x => x.date === target && x.text);
+      return d ? { ago: months === 12 ? "One year ago" : "One month ago", date: this.dateFmt(d.date, { month: "short", day: "numeric", year: "numeric" }), snippet: d.text.length > 150 ? d.text.slice(0, 148) + "…" : d.text } : null;
+    };
+    const onThisDay = [ago(1), ago(12)].filter(Boolean);
+
+    // reader
+    const rd = st.readerId ? st.days.find(d => d.date === st.readerId) : null;
+    const reader = rd ? {
+      date: this.dateFmt(rd.date, { weekday: "long", month: "long", day: "numeric", year: "numeric" }),
+      meta: [rd.mood ? "mood " + rd.mood + "/5" : null, rd.energy ? "energy " + rd.energy + "/5" : null, rd.sleep + "h sleep"].filter(Boolean).join("  ·  "),
+      text: rd.text || "No writing this day.",
+      hasUrges: rd.urges.length > 0,
+      urges: rd.urges.map(u => ({ time: this.fmtTime(u.t), line: u.trigger + " · " + u.level + "/5 · " + this.urgeLine(u) }))
+    } : null;
+
+    // insights
+    const last30 = st.days.slice(0, 30);
+    const clean = last30.filter(d => !d.urges.some(u => u.outcome === "gave")).length;
+    const hours = new Array(24).fill(0);
+    st.days.slice(0, 90).forEach(d => d.urges.forEach(u => hours[Math.floor(u.t / 60) % 24]++));
+    const hmax = Math.max(1, ...hours);
+    const peak = hours.indexOf(hmax);
+    const hourBars = hours.map((n, h) => ({
+      h: Math.round((n / hmax) * 100) + "%",
+      c: n === hmax ? "#e0b98d" : "rgba(239,236,229,.22)"
+    }));
+    const hourNote = "Heaviest around " + this.fmtTime(peak * 60) + ". " + Math.round(hours.slice(21).concat(hours.slice(0, 2)).reduce((a, b) => a + b, 0) / hours.reduce((a, b) => a + b, 1) * 100) + "% fall between 9pm and 2am.";
+
+    const moodSeries = last30.slice().reverse().map(d => d.mood);
+    const W = 386, H = 88;
+    const pts = [];
+    moodSeries.forEach((m, i) => {
+      if (m == null) return;
+      const x = (i / (moodSeries.length - 1)) * W;
+      const y = H - ((m - 1) / 4) * H;
+      pts.push([x, y]);
+    });
+    const moodChart = React.createElement("svg", { viewBox: "0 0 " + W + " " + (H + 8), width: "100%", height: 96, style: { display: "block", overflow: "visible" } },
+      [1, 3, 5].map(v => React.createElement("line", { key: "g" + v, x1: 0, x2: W, y1: H - ((v - 1) / 4) * H, y2: H - ((v - 1) / 4) * H, stroke: "rgba(239,236,229,.07)", strokeWidth: 1 })),
+      React.createElement("polyline", { points: pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" "), fill: "none", stroke: "#e0b98d", strokeWidth: 1.6, strokeLinejoin: "round", strokeLinecap: "round", opacity: .9 }),
+      pts.length ? React.createElement("circle", { cx: pts[pts.length - 1][0], cy: pts[pts.length - 1][1], r: 3, fill: "#e0b98d" }) : null
+    );
+
+    const buckets = [["<6h", 0, 6], ["6–7.5h", 6, 7.5], ["7.5h+", 7.5, 99]];
+    const rows = buckets.map(([label, lo, hi]) => {
+      const set = st.days.slice(0, 90).filter(d => d.sleep >= lo && d.sleep < hi);
+      const avg = set.length ? set.reduce((a, d) => a + d.urges.length, 0) / set.length : 0;
+      return { label, avg };
+    });
+    const amax = Math.max(0.01, ...rows.map(r => r.avg));
+    const sleepRows = rows.map((r, i) => ({ label: r.label, val: r.avg.toFixed(1), w: Math.max(2, Math.round((r.avg / amax) * 100)) + "%", c: i === 0 ? "#e0b98d" : "rgba(239,236,229,.3)" }));
+
+    const words = t.text.trim() ? t.text.trim().split(/\s+/).length : 0;
+
+    return {
+      tabs, isToday: st.tab === "today", isArchive: st.tab === "archive", isInsights: st.tab === "insights",
+      fabVisible: !st.sheetOpen && !st.readerId,
+      weekday: this.dateFmt(t.date, { weekday: "long" }),
+      dateLong: this.dateFmt(t.date, { month: "long", day: "numeric" }),
+      prompt: PROMPTS[st.promptIdx % PROMPTS.length], promptShown: st.promptShown && !t.text,
+      nextPrompt: () => this.setState(s => ({ promptIdx: s.promptIdx + 1 })),
+      text: t.text,
+      onText: (e) => { this.ta = e.target; this.patchToday({ text: e.target.value }); this.grow(); },
+      taRef: (el) => { if (el && !this.ta) { this.ta = el; this.grow(); } },
+      wordCount: words ? words + (words === 1 ? " word" : " words") : "",
+      hasUrgesToday: t.urges.length > 0,
+      urgesToday: t.urges.map(u => ({ time: this.fmtTime(u.t), trigger: u.trigger, level: u.level + "/5", line: this.urgeLine(u) })),
+      moodScale: this.scale(t.mood, v => this.patchToday({ mood: v })),
+      energyScale: this.scale(t.energy, v => this.patchToday({ energy: v })),
+      sleepLabel: t.sleep.toFixed(1).replace(".0", "") + " h",
+      sleepDown: () => this.patchToday({ sleep: Math.max(0, t.sleep - 0.5) }),
+      sleepUp: () => this.patchToday({ sleep: Math.min(14, t.sleep + 0.5) }),
+      habitList: HABITS.map(name => {
+        const on = t.habits.includes(name);
+        return {
+          name, dot: on ? "#e0b98d" : "rgba(239,236,229,.22)",
+          bg: on ? "rgba(224,185,141,.10)" : "transparent",
+          bd: on ? "rgba(224,185,141,.42)" : "rgba(239,236,229,.12)",
+          fg: on ? "#efece5" : "rgba(239,236,229,.46)",
+          toggle: () => this.patchToday({ habits: on ? t.habits.filter(h => h !== name) : t.habits.concat([name]) })
+        };
+      }),
+      q: st.q, onSearch: (e) => this.setState({ q: e.target.value }),
+      entryList, noResults: entryList.length === 0,
+      onThisDay, showOnThisDay: onThisDay.length > 0 && !q,
+      readerOpen: !!reader, reader, closeReader: () => this.setState({ readerId: null }),
+      sheetOpen: st.sheetOpen, openSheet: () => this.setState({ sheetOpen: true }),
+      closeSheet: () => this.setState({ sheetOpen: false, sheetLevel: 3, sheetTrigger: null, sheetNote: "", sheetAlt: "" }),
+      nowTime: this.fmtTime(new Date().getHours() * 60 + new Date().getMinutes()),
+      intensityScale: this.scale(st.sheetLevel, v => this.setState({ sheetLevel: v })),
+      triggerChips: TRIGGERS.map(name => {
+        const on = st.sheetTrigger === name;
+        return {
+          name, set: () => this.setState({ sheetTrigger: on ? null : name }),
+          bg: on ? "rgba(224,185,141,.12)" : "transparent",
+          bd: on ? "rgba(224,185,141,.48)" : "rgba(239,236,229,.13)",
+          fg: on ? "#f0d3b2" : "rgba(239,236,229,.5)"
+        };
+      }),
+      sheetNote: st.sheetNote, onSheetNote: (e) => this.setState({ sheetNote: e.target.value }),
+      sheetAlt: st.sheetAlt, onSheetAlt: (e) => this.setState({ sheetAlt: e.target.value }),
+      saveRode: () => this.logUrge("rode"), saveGave: () => this.logUrge("gave"),
+      cleanDays: String(clean), hourBars, hourNote, moodChart, sleepRows
+    };
+  }
+
+  logUrge(outcome) {
+    const now = new Date();
+    const u = {
+      t: now.getHours() * 60 + now.getMinutes(),
+      level: this.state.sheetLevel,
+      trigger: this.state.sheetTrigger || "other",
+      note: this.state.sheetNote.trim(), alt: this.state.sheetAlt.trim(), outcome
+    };
+    const key = this.today().date;
+    this.setState(s => ({
+      days: s.days.map(d => d.date === key ? Object.assign({}, d, { urges: d.urges.concat([u]).sort((a, b) => a.t - b.t) }) : d),
+      sheetOpen: false, sheetLevel: 3, sheetTrigger: null, sheetNote: "", sheetAlt: "", tab: "today"
+    }));
+  }
+}
+
+</script>
+</body>
+</html>
