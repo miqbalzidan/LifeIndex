@@ -317,9 +317,18 @@ input::placeholder {
   padding: 0 0 12px 9px;
 }
 
+/* A control now: opens the urge for changing or deleting. */
 .timeline-item {
   position: relative;
+  display: block;
+  width: 100%;
   padding: 0 0 16px 18px;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
 }
 
 .timeline-dot {
@@ -362,6 +371,7 @@ input::placeholder {
 }
 
 .timeline-line {
+  display: block;
   font-size: 13.5px;
   line-height: 1.5;
   color: var(--ink-62);
@@ -868,47 +878,12 @@ input::placeholder {
   letter-spacing: -0.01em;
 }
 
-.reader-meta {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-36);
-  margin-top: 8px;
-}
-
-.reader-text {
-  font-family: var(--serif);
-  font-size: 19px;
-  line-height: 1.65;
-  color: var(--ink-92);
+/* The entry keeps the air the static reader text used to have under the date;
+   it is the same reading surface, it just takes a caret now. */
+.reader .editor {
   margin-top: 26px;
-  white-space: pre-wrap;
 }
 
-.reader-text--absent {
-  color: var(--ink-42);
-  font-style: italic;
-}
-
-.reader-urges {
-  margin-top: 32px;
-  padding-top: 22px;
-  border-top: 1px solid var(--ink-09);
-}
-
-.reader-urge {
-  display: flex;
-  gap: 12px;
-  padding: 8px 0;
-  font-size: 13.5px;
-  color: var(--ink-62);
-}
-
-.reader-urge-time {
-  font-family: var(--mono);
-  color: var(--ink-80);
-}
 
 /* --- urge sheet ----------------------------------------------------------- */
 
@@ -1069,6 +1044,29 @@ input::placeholder {
 
 .sheet-dismiss:hover {
   color: var(--ink-60);
+}
+
+/* Deleting is the one thing in the sheet that removes something already
+   written, so it asks. Typographic and unaccented like everything else — there
+   is no alarm styling anywhere in this app. */
+.sheet-confirm {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 8px;
+}
+
+.sheet-confirm-text {
+  font-size: 13px;
+  color: var(--ink-58);
+}
+
+.sheet-dismiss--inline {
+  width: auto;
+  margin-top: 0;
+  padding: 0;
 }
 
 /* --- floating action ------------------------------------------------------ */

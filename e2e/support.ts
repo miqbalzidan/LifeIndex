@@ -2,6 +2,13 @@ import type { Page } from "@playwright/test";
 
 const KEY = "nightly.journal.v1";
 
+/**
+ * One guard key per `seed` call. Each fixture applies once, on the navigation
+ * that follows it, and never again on a reload — so a test can reload to check
+ * that its own edit was saved, and can still re-seed a different fixture.
+ */
+let seedCount = 0;
+
 export interface SeedDay {
   text?: string;
   mood?: number | null;
@@ -37,11 +44,19 @@ export function entry(date: string, over: SeedDay = {}) {
  *
  * Seeding after load and reloading does not work: the running app flushes its
  * own (empty) state on the way out and lands on top of the fixture.
+ *
+ * The init script runs on every navigation, so it is guarded to fire once.
+ * Without that, a test that reloads to check something was saved would be
+ * handed the original fixture back and never see its own edit.
  */
 export async function seed(page: Page, days: Record<string, unknown>) {
   await page.addInitScript(
-    ([key, value]) => localStorage.setItem(key, value),
-    [KEY, JSON.stringify({ days, promptSkips: 0 })] as const
+    ([key, value, guard]) => {
+      if (sessionStorage.getItem(guard)) return;
+      sessionStorage.setItem(guard, "1");
+      localStorage.setItem(key, value);
+    },
+    [KEY, JSON.stringify({ days, promptSkips: 0 }), `nightly.e2e.seeded.${++seedCount}`] as const
   );
   await page.goto("/");
 }

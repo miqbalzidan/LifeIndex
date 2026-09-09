@@ -32,10 +32,13 @@ attaches to the day rather than the other way round.
   on 1–5, hours slept, and a quiet row of habits. Urges logged today appear as a
   timeline under the entry.
 - **Urge log** — a bottom sheet, not a screen. Intensity, a trigger chip, two
-  free-text lines, and two closing buttons of identical weight.
+  free-text lines, and two closing buttons of identical weight. Tapping an urge
+  already logged reopens the same sheet to correct or delete it, keeping the
+  minute it was logged at.
 - **Archive** — reverse-chronological, searchable, with an "on this day" card
   surfacing one month and one year back, and, at the foot of the page, the way
-  to get a copy of the journal out and back in.
+  to get a copy of the journal out and back in. Opening an entry opens the day
+  itself: the writing, its urges and its measures are all still editable.
 - **Insights** — clean days as a share of the last 30, urges by hour, mood over
   time, and urges per night grouped by hours slept.
 
@@ -79,6 +82,7 @@ undo by accident:
 src/
   App.tsx              screen switching, overlays, the floating log button
   components/          one file per surface, plus the shared 1–5 scale
+  components/DayEditor.tsx  one day, open for writing — used by Today and the reader
   hooks/useJournal.ts  the journal: today, mutations, persistence
   hooks/useOverlay.ts  escape-to-close, scroll lock, focus restore
   lib/date.ts          local-calendar dates and clock formatting
@@ -110,6 +114,23 @@ tomorrow for anyone west of Greenwich.
 
 Relatedly, the app does not roll over to a new day while you have it open and
 are writing. It re-checks the date when you reopen or refocus it.
+
+### A past day is the day itself
+
+The reader is a reading surface — the writing keeps the same serif at the same
+size it has everywhere else — but it is not a printout. It renders the same
+`DayEditor` Today does, so a typo three months old can be fixed, a mood can be
+set after the fact, and an urge logged in the wrong minute can be corrected or
+removed. Every mutation on `useJournal` takes the date it applies to; there is
+no separate path for "today" that the archive lacks.
+
+Deleting an urge asks first. It is the only action in the app that removes
+something already written, and it is still typographic and unaccented — a
+delete confirmation is not where this app starts using red.
+
+The urge sheet can open on top of the reader, so `useOverlay` keeps a stack and
+only the topmost overlay answers Escape and traps Tab. Without that, one press
+would close the sheet and the entry behind it together.
 
 ### Getting a copy out
 

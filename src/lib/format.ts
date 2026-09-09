@@ -20,10 +20,6 @@ export function urgeLine(u: Urge): string {
   return parts.join(" ");
 }
 
-export function urgeDetail(u: Urge): string {
-  return `${u.trigger} · ${u.level}/5 · ${urgeLine(u)}`;
-}
-
 export function entryMeta(day: Day): string {
   return [
     day.mood ? `mood ${day.mood}` : null,
@@ -32,16 +28,6 @@ export function entryMeta(day: Day): string {
   ]
     .filter(Boolean)
     .join(" · ");
-}
-
-export function readerMeta(day: Day): string {
-  return [
-    day.mood ? `mood ${day.mood}/5` : null,
-    day.energy ? `energy ${day.energy}/5` : null,
-    day.sleep !== null ? `${day.sleep}h sleep` : null,
-  ]
-    .filter(Boolean)
-    .join("  ·  ");
 }
 
 export function snippet(text: string, max: number): string {

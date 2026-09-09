@@ -88,6 +88,10 @@ test("a day with urges but no writing is still readable", async ({ page }) => {
   await expect(page.locator("button.entry")).toContainText("No entry — 1 urge logged.");
   await page.locator("button.entry").click();
   const reader = page.getByRole("dialog", { name: "Entry" });
-  await expect(reader).toContainText("No writing this day.");
-  await expect(reader).toContainText("tired · 4/5 · late Gave in.");
+  await expect(reader.locator("textarea.editor")).toHaveAttribute(
+    "placeholder",
+    "No writing this day."
+  );
+  await expect(reader.locator(".timeline-item")).toContainText("tired");
+  await expect(reader.locator(".timeline-item")).toContainText("late Gave in.");
 });

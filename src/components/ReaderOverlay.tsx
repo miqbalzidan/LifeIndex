@@ -1,16 +1,25 @@
+import { DayEditor } from "./DayEditor.tsx";
 import { useOverlay } from "../hooks/useOverlay.ts";
-import { formatDate, formatTime } from "../lib/date.ts";
-import { readerMeta, urgeDetail } from "../lib/format.ts";
-import type { Day } from "../types.ts";
+import { formatDate } from "../lib/date.ts";
+import type { JournalApi } from "../hooks/useJournal.ts";
+import type { Day, Urge } from "../types.ts";
 
 interface ReaderOverlayProps {
   day: Day;
+  journal: JournalApi;
   onClose: () => void;
+  onEditUrge: (urge: Urge) => void;
 }
 
-export function ReaderOverlay({ day, onClose }: ReaderOverlayProps) {
+/**
+ * A past day, opened from the archive.
+ *
+ * It reads as a page rather than a form — the writing keeps the same serif at
+ * the same size it has everywhere else — but it is the day itself, not a
+ * printout of it, so a typo can be fixed and a mis-logged urge corrected.
+ */
+export function ReaderOverlay({ day, journal, onClose, onEditUrge }: ReaderOverlayProps) {
   const ref = useOverlay<HTMLDivElement>(onClose);
-  const text = day.text.trim();
 
   return (
     <div
@@ -29,22 +38,16 @@ export function ReaderOverlay({ day, onClose }: ReaderOverlayProps) {
         <h1 className="reader-date">
           {formatDate(day.date, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
         </h1>
-        <div className="reader-meta">{readerMeta(day)}</div>
 
-        <div className={text ? "reader-text" : "reader-text reader-text--absent"}>
-          {text || "No writing this day."}
-        </div>
-
-        {day.urges.length > 0 && (
-          <section className="reader-urges">
-            {day.urges.map((u) => (
-              <div key={u.id} className="reader-urge">
-                <span className="reader-urge-time">{formatTime(u.t)}</span>
-                <span>{urgeDetail(u)}</span>
-              </div>
-            ))}
-          </section>
-        )}
+        <DayEditor
+          day={day}
+          timelineLabel="Urges this day"
+          placeholder="No writing this day."
+          onPatch={(patch) => journal.patchDay(day.date, patch)}
+          onToggleHabit={(habit) => journal.toggleHabit(day.date, habit)}
+          onAdjustSleep={(delta) => journal.adjustSleep(day.date, delta)}
+          onEditUrge={onEditUrge}
+        />
       </div>
     </div>
   );

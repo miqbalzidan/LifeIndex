@@ -11,6 +11,13 @@ const FOCUSABLE = [
 ].join(",");
 
 /**
+ * Open overlays, outermost first. The urge sheet can open on top of the reader,
+ * and without this both would answer the same Escape — closing the sheet and
+ * the entry behind it in one press — and both would try to trap Tab.
+ */
+const stack: symbol[] = [];
+
+/**
  * Shared behaviour for the two things that cover the app — the entry reader and
  * the urge sheet.
  *
@@ -29,8 +36,12 @@ export function useOverlay<T extends HTMLElement>(onClose: () => void) {
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
+    const token = Symbol("overlay");
+    stack.push(token);
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (stack[stack.length - 1] !== token) return;
+
       if (e.key === "Escape") {
         e.stopPropagation();
         onClose();
@@ -71,6 +82,7 @@ export function useOverlay<T extends HTMLElement>(onClose: () => void) {
     ref.current?.focus({ preventScroll: true });
 
     return () => {
+      stack.splice(stack.indexOf(token), 1);
       document.body.style.overflow = overflow;
       document.removeEventListener("keydown", onKeyDown);
       if (opener?.isConnected) opener.focus({ preventScroll: true });

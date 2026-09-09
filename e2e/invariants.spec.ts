@@ -98,6 +98,30 @@ test.describe("the two urge outcomes carry equal weight", () => {
     expect(a!.height).toBeCloseTo(b!.height, 0);
   });
 
+  test("the same is true of the sheet opened to edit an urge", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Log urge" }).click();
+    await page.getByRole("button", { name: "Gave in", exact: true }).click();
+    await page.locator(".timeline-item").click();
+    await expect(page.locator(".sheet-title")).toHaveText("Edit urge");
+
+    const rode = page.getByRole("button", { name: "Rode it out", exact: true });
+    const gave = page.getByRole("button", { name: "Gave in", exact: true });
+    const paint = (locator: typeof rode) =>
+      locator.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return `${s.color}|${s.backgroundColor}|${s.borderColor}|${s.fontSize}|${s.fontWeight}`;
+      });
+    expect(await paint(gave)).toBe(await paint(rode));
+
+    // Deleting is destructive, but it is still not styled as an alarm: this app
+    // has no red in it, and a delete confirmation is not where that changes.
+    expect(await redsOnPage(page), "edit sheet").toEqual([]);
+    await page.getByRole("button", { name: "Delete this urge" }).click();
+    await expect(page.locator(".sheet-confirm")).toBeVisible();
+    expect(await redsOnPage(page), "delete confirmation").toEqual([]);
+  });
+
   test("there is no red anywhere on the 'gave in' path", async ({ page }) => {
     // Seeded so that every chart, the headline and the timeline are all
     // actually drawn — an empty app has very little colour to get wrong.

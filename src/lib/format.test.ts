@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { day, urge } from "../../test/factory.ts";
-import { entryMeta, plural, readerMeta, sleepLabel, snippet, urgeDetail, urgeLine, wordCount } from "./format.ts";
+import { entryMeta, plural, sleepLabel, snippet, urgeLine, wordCount } from "./format.ts";
 
 describe("plural", () => {
   it("agrees with the count", () => {
@@ -56,14 +56,6 @@ describe("urgeLine", () => {
   });
 });
 
-describe("urgeDetail", () => {
-  it("leads with the trigger and intensity", () => {
-    expect(urgeDetail(urge({ trigger: "tired", level: 4, note: "late" }))).toBe(
-      "tired · 4/5 · late Rode it out."
-    );
-  });
-});
-
 describe("entryMeta", () => {
   it("names only what is there", () => {
     expect(entryMeta(day("2026-09-09", { mood: 4, sleep: 7 }))).toBe("mood 4 · 7h");
@@ -82,20 +74,6 @@ describe("entryMeta", () => {
 
   it("reports a recorded night of no sleep at all", () => {
     expect(entryMeta(day("2026-09-09", { sleep: 0 }))).toBe("0h");
-  });
-});
-
-describe("readerMeta", () => {
-  it("omits a mood or energy that was never set", () => {
-    expect(readerMeta(day("2026-09-09", { mood: 3, energy: 5, sleep: 7 }))).toBe(
-      "mood 3/5  ·  energy 5/5  ·  7h sleep"
-    );
-    expect(readerMeta(day("2026-09-09", { sleep: 6 }))).toBe("6h sleep");
-  });
-
-  it("does not claim a night of sleep that was never recorded", () => {
-    expect(readerMeta(day("2026-09-09", { mood: 3 }))).toBe("mood 3/5");
-    expect(readerMeta(day("2026-09-09"))).toBe("");
   });
 });
 

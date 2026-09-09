@@ -88,7 +88,9 @@ test.describe("sleep is recorded, not assumed", () => {
     // And the reader does not claim a night of seven hours either.
     await page.getByRole("tab", { name: "Archive" }).click();
     await page.locator("button.entry").click();
-    await expect(page.getByRole("dialog", { name: "Entry" }).locator(".reader-meta")).toHaveText("");
+    await expect(
+      page.getByRole("dialog", { name: "Entry" }).locator(".stepper-value")
+    ).toContainText("—");
   });
 
   test("a recorded night does reach the chart", async ({ page }) => {

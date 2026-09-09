@@ -6,25 +6,31 @@ import { formatTime, minutesNow } from "../lib/date.ts";
 import type { Outcome, Rating, Urge } from "../types.ts";
 
 interface UrgeSheetProps {
+  /** The urge being changed, when this is an edit rather than a new log. */
+  editing?: Urge;
   onClose: () => void;
   onSave: (urge: Omit<Urge, "id">) => void;
+  /** Only offered while editing; there is nothing to delete on a new one. */
+  onDelete?: () => void;
 }
 
-export function UrgeSheet({ onClose, onSave }: UrgeSheetProps) {
+export function UrgeSheet({ editing, onClose, onSave, onDelete }: UrgeSheetProps) {
   const ref = useOverlay<HTMLDivElement>(onClose);
 
-  const [level, setLevel] = useState<Rating>(3);
-  const [trigger, setTrigger] = useState<string | null>(null);
-  const [note, setNote] = useState("");
-  const [alt, setAlt] = useState("");
+  const [level, setLevel] = useState<Rating>(editing?.level ?? 3);
+  const [trigger, setTrigger] = useState<string | null>(editing?.trigger ?? null);
+  const [note, setNote] = useState(editing?.note ?? "");
+  const [alt, setAlt] = useState(editing?.alt ?? "");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Stamped when the sheet opens, and saved as-is: the urge happened when you
-  // reached for this, not whenever you finished writing it up.
-  const [openedAt] = useState(() => minutesNow());
+  // reached for this, not whenever you finished writing it up. An edit keeps
+  // the minute it was logged at rather than moving it to now.
+  const [at] = useState(() => editing?.t ?? minutesNow());
 
   const save = (outcome: Outcome) => {
     onSave({
-      t: openedAt,
+      t: at,
       level,
       trigger: trigger ?? "other",
       note: note.trim(),
@@ -52,9 +58,9 @@ export function UrgeSheet({ onClose, onSave }: UrgeSheetProps) {
 
         <div className="sheet-head">
           <h2 className="sheet-title" id="sheet-title">
-            Log an urge
+            {editing ? "Edit urge" : "Log an urge"}
           </h2>
-          <div className="sheet-time">{formatTime(openedAt)}</div>
+          <div className="sheet-time">{formatTime(at)}</div>
         </div>
 
         <div className="sheet-field">
@@ -110,6 +116,31 @@ export function UrgeSheet({ onClose, onSave }: UrgeSheetProps) {
             Gave in
           </button>
         </div>
+
+        {onDelete &&
+          (confirmingDelete ? (
+            <div className="sheet-confirm">
+              <span className="sheet-confirm-text">Delete this urge?</span>
+              <button type="button" className="sheet-dismiss sheet-dismiss--inline" onClick={onDelete}>
+                Delete
+              </button>
+              <button
+                type="button"
+                className="sheet-dismiss sheet-dismiss--inline"
+                onClick={() => setConfirmingDelete(false)}
+              >
+                Keep
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="sheet-dismiss"
+              onClick={() => setConfirmingDelete(true)}
+            >
+              Delete this urge
+            </button>
+          ))}
 
         <button type="button" className="sheet-dismiss" onClick={onClose}>
           Close without saving
