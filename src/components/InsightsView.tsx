@@ -5,7 +5,7 @@ import {
   buildHourHistogram,
   buildMoodSeries,
   buildSleepRows,
-  countCleanDays,
+  cleanShare,
   hourNote,
 } from "../lib/insights.ts";
 import type { Day } from "../types.ts";
@@ -15,7 +15,7 @@ interface InsightsViewProps {
 }
 
 export function InsightsView({ days }: InsightsViewProps) {
-  const clean = useMemo(() => countCleanDays(days), [days]);
+  const clean = useMemo(() => cleanShare(days), [days]);
   const hours = useMemo(() => buildHourHistogram(days), [days]);
   const moods = useMemo(() => buildMoodSeries(days), [days]);
   const sleepRows = useMemo(() => buildSleepRows(days), [days]);
@@ -32,14 +32,21 @@ export function InsightsView({ days }: InsightsViewProps) {
       </header>
 
       {/* A share of the window, never a streak — this number cannot fall to
-          zero because of a single day. */}
+          zero because of a single day.
+
+          The denominator is the journal's own history, not a flat 30: it runs
+          back to the first day anything was recorded and grows from there. A
+          journal that has not lived a month should not be able to report one,
+          in either direction — neither a perfect 30 / 30 nor a failed 0 / 30. */}
       <section className="headline">
         <div className="headline-figure">
-          <div className="headline-value">{clean}</div>
-          <div className="headline-of">/ {CLEAN_WINDOW_DAYS}</div>
+          <div className="headline-value">{clean.clean}</div>
+          <div className="headline-of">/ {clean.of}</div>
         </div>
         <p className="headline-note">
-          Clean days in the last {CLEAN_WINDOW_DAYS}. Counted as a share, not a streak.
+          {clean.of === CLEAN_WINDOW_DAYS
+            ? `Clean days in the last ${CLEAN_WINDOW_DAYS}. Counted as a share, not a streak.`
+            : `Clean days so far. Counted as a share, not a streak, over the last ${CLEAN_WINDOW_DAYS} days once there are that many.`}
         </p>
       </section>
 

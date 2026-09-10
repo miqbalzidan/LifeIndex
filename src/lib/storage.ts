@@ -1,4 +1,5 @@
-import { DEFAULT_SLEEP, SLEEP_MAX, SLEEP_MIN } from "./constants.ts";
+import { DEFAULT_HABITS, SLEEP_MAX, SLEEP_MIN } from "./constants.ts";
+import { cleanHabitList } from "./habits.ts";
 import type { Day, Journal, Outcome, Rating, Urge } from "../types.ts";
 
 /**
@@ -7,10 +8,14 @@ import type { Day, Journal, Outcome, Rating, Urge } from "../types.ts";
  */
 const KEY = "nightly.journal.v1";
 
-export const emptyJournal = (): Journal => ({ days: {}, promptSkips: 0 });
+export const emptyJournal = (): Journal => ({
+  days: {},
+  habits: [...DEFAULT_HABITS],
+  promptSkips: 0,
+});
 
 export function blankDay(date: string): Day {
-  return { date, text: "", mood: null, energy: null, sleep: DEFAULT_SLEEP, habits: [], urges: [] };
+  return { date, text: "", mood: null, energy: null, sleep: null, habits: [], urges: [] };
 }
 
 const isRating = (v: unknown): v is Rating => v === 1 || v === 2 || v === 3 || v === 4 || v === 5;
@@ -39,13 +44,17 @@ function asDay(date: string, raw: unknown): Day | null {
   if (!raw || typeof raw !== "object") return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   const d = raw as Record<string, unknown>;
-  const sleep = typeof d["sleep"] === "number" && Number.isFinite(d["sleep"]) ? d["sleep"] : DEFAULT_SLEEP;
+  const rawSleep = d["sleep"];
+  const sleep =
+    typeof rawSleep === "number" && Number.isFinite(rawSleep)
+      ? Math.max(SLEEP_MIN, Math.min(SLEEP_MAX, rawSleep))
+      : null;
   return {
     date,
     text: asString(d["text"]),
     mood: asRating(d["mood"]),
     energy: asRating(d["energy"]),
-    sleep: Math.max(SLEEP_MIN, Math.min(SLEEP_MAX, sleep)),
+    sleep,
     habits: Array.isArray(d["habits"]) ? d["habits"].filter((h): h is string => typeof h === "string") : [],
     urges: Array.isArray(d["urges"])
       ? d["urges"].map(asUrge).filter((u): u is Urge => u !== null).sort((a, b) => a.t - b.t)
@@ -54,9 +63,37 @@ function asDay(date: string, raw: unknown): Day | null {
 }
 
 /**
- * Reads the journal back, discarding anything malformed rather than throwing.
- * A corrupt field should cost you one value, not the whole archive.
+ * Turns anything shaped roughly like a journal into a real one, discarding what
+ * is malformed rather than throwing. A corrupt field should cost you one value,
+ * not the whole archive.
+ *
+ * Used for what comes out of storage and for what comes out of an imported
+ * file: a file off someone's disk deserves exactly as much suspicion.
  */
+export function normaliseJournal(parsed: unknown): Journal {
+  if (!parsed || typeof parsed !== "object") return emptyJournal();
+  const source = (parsed as Record<string, unknown>)["days"];
+  const days: Record<string, Day> = {};
+  if (source && typeof source === "object") {
+    for (const [date, value] of Object.entries(source as Record<string, unknown>)) {
+      const day = asDay(date, value);
+      if (day) days[date] = day;
+    }
+  }
+  // An absent habit list means a journal written before habits were editable,
+  // so it gets the defaults. An empty one means the user removed them all, and
+  // that is a choice to keep rather than undo.
+  const storedHabits = (parsed as Record<string, unknown>)["habits"];
+  const habits = Array.isArray(storedHabits) ? cleanHabitList(storedHabits) : [...DEFAULT_HABITS];
+
+  const skips = (parsed as Record<string, unknown>)["promptSkips"];
+  return {
+    days,
+    habits,
+    promptSkips: typeof skips === "number" && skips >= 0 ? Math.floor(skips) : 0,
+  };
+}
+
 export function loadJournal(): Journal {
   let raw: string | null = null;
   try {
@@ -68,18 +105,7 @@ export function loadJournal(): Journal {
   if (!raw) return emptyJournal();
 
   try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object") return emptyJournal();
-    const source = (parsed as Record<string, unknown>)["days"];
-    const days: Record<string, Day> = {};
-    if (source && typeof source === "object") {
-      for (const [date, value] of Object.entries(source as Record<string, unknown>)) {
-        const day = asDay(date, value);
-        if (day) days[date] = day;
-      }
-    }
-    const skips = (parsed as Record<string, unknown>)["promptSkips"];
-    return { days, promptSkips: typeof skips === "number" && skips >= 0 ? Math.floor(skips) : 0 };
+    return normaliseJournal(JSON.parse(raw) as unknown);
   } catch {
     return emptyJournal();
   }
@@ -102,6 +128,6 @@ export function dayHasContent(day: Day): boolean {
     day.energy !== null ||
     day.habits.length > 0 ||
     day.urges.length > 0 ||
-    day.sleep !== DEFAULT_SLEEP
+    day.sleep !== null
   );
 }

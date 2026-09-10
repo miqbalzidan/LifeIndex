@@ -7,19 +7,47 @@ type Days = Record<string, Day>;
 const recorded = (days: Days, dates: string[]): Day[] =>
   dates.map((d) => days[d]).filter((d): d is Day => d !== undefined);
 
+export interface CleanShare {
+  /** Days in the window with no urge you gave in to. */
+  clean: number;
+  /** Days in the window — the denominator, which is not always 30. */
+  of: number;
+}
+
+/** The earliest date the journal holds anything for, or null when it is empty. */
+function firstRecordedDate(days: Days): string | null {
+  let earliest: string | null = null;
+  for (const date of Object.keys(days)) {
+    if (earliest === null || date < earliest) earliest = date;
+  }
+  return earliest;
+}
+
 /**
- * Days in the window with no urge you gave in to.
+ * Clean days, as a share of the journal's own history.
  *
- * Counted over calendar days, not over days you happened to open the app, and
- * always reported as a share of the window. A day you never touched counts as
- * clean — the stat measures the thing being tracked, not your attendance, and
- * it must never behave like a streak that resets to zero.
+ * The window runs back from today to whichever is later: 30 days ago, or the
+ * first day anything was recorded. So it opens at 0 / 0, becomes 1 / 1, and
+ * grows to a rolling 30 once the journal is a month old.
+ *
+ * Within that window the count is still over calendar days rather than days
+ * the app was opened — a day you never touched counts as clean. The stat
+ * measures the thing being tracked, not your attendance, and it must never
+ * behave like a streak that resets to zero. What the growing denominator
+ * avoids is the opposite failure: reading a perfect month off a journal that
+ * has not lived one.
  */
-export function countCleanDays(days: Days, now = new Date()): number {
-  return recentDates(CLEAN_WINDOW_DAYS, now).filter((date) => {
+export function cleanShare(days: Days, now = new Date()): CleanShare {
+  const first = firstRecordedDate(days);
+  if (first === null) return { clean: 0, of: 0 };
+
+  const window = recentDates(CLEAN_WINDOW_DAYS, now).filter((date) => date >= first);
+  const clean = window.filter((date) => {
     const day = days[date];
     return !day || !day.urges.some((u) => u.outcome === "gave");
   }).length;
+
+  return { clean, of: window.length };
 }
 
 export interface HourHistogram {
@@ -83,7 +111,12 @@ const SLEEP_BUCKETS: [label: string, lo: number, hi: number][] = [
 ];
 
 export function buildSleepRows(days: Days, now = new Date()): SleepRow[] {
-  const window = recorded(days, recentDates(CHART_WINDOW_DAYS, now));
+  // Only nights whose sleep was actually recorded. Counting the rest at some
+  // default would put a night the user never entered into a bucket and let it
+  // pull that bucket's average around.
+  const window = recorded(days, recentDates(CHART_WINDOW_DAYS, now)).filter(
+    (d): d is Day & { sleep: number } => d.sleep !== null
+  );
   return SLEEP_BUCKETS.map(([label, lo, hi]) => {
     const nights = window.filter((d) => d.sleep >= lo && d.sleep < hi);
     const urges = nights.reduce((sum, d) => sum + d.urges.length, 0);

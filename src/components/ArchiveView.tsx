@@ -1,10 +1,12 @@
 import { useMemo } from "react";
+import { JournalTransfer } from "./JournalTransfer.tsx";
 import { formatDate, formatEntryDate, monthsAgoIso } from "../lib/date.ts";
 import { entryMeta, plural, snippet } from "../lib/format.ts";
+import type { JournalApi } from "../hooks/useJournal.ts";
 import type { Day } from "../types.ts";
 
 interface ArchiveViewProps {
-  days: Record<string, Day>;
+  journal: JournalApi;
   query: string;
   onQueryChange: (q: string) => void;
   onOpen: (date: string) => void;
@@ -15,7 +17,8 @@ const ON_THIS_DAY = [
   { months: 12, label: "One year ago" },
 ];
 
-export function ArchiveView({ days, query, onQueryChange, onOpen }: ArchiveViewProps) {
+export function ArchiveView({ journal, query, onQueryChange, onOpen }: ArchiveViewProps) {
+  const { days } = journal;
   const q = query.trim().toLowerCase();
 
   // Reverse-chronological, and only days that hold something worth reading back.
@@ -95,6 +98,8 @@ export function ArchiveView({ days, query, onQueryChange, onOpen }: ArchiveViewP
           </p>
         )}
       </div>
+
+      <JournalTransfer journal={journal.journal} onImport={journal.replaceJournal} />
     </div>
   );
 }

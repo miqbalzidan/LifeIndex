@@ -8,13 +8,16 @@ import { UrgeSheet } from "./components/UrgeSheet.tsx";
 import { useJournal } from "./hooks/useJournal.ts";
 import type { Tab, Urge } from "./types.ts";
 
+/** Logging a new urge, or changing one already on a day. */
+type Sheet = { kind: "new" } | { kind: "edit"; date: string; urge: Urge };
+
 export default function App() {
   const journal = useJournal();
 
   const [tab, setTab] = useState<Tab>("today");
   const [query, setQuery] = useState("");
   const [readerDate, setReaderDate] = useState<string | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheet, setSheet] = useState<Sheet | null>(null);
 
   const reader = readerDate ? journal.days[readerDate] : undefined;
 
@@ -24,11 +27,11 @@ export default function App() {
   const fabRef = useRef<HTMLButtonElement>(null);
   const sheetWasOpen = useRef(false);
   useEffect(() => {
-    if (sheetWasOpen.current && !sheetOpen) fabRef.current?.focus({ preventScroll: true });
-    sheetWasOpen.current = sheetOpen;
-  }, [sheetOpen]);
+    if (sheetWasOpen.current && sheet === null) fabRef.current?.focus({ preventScroll: true });
+    sheetWasOpen.current = sheet !== null;
+  }, [sheet]);
 
-  const closeSheet = useCallback(() => setSheetOpen(false), []);
+  const closeSheet = useCallback(() => setSheet(null), []);
   const closeReader = useCallback(() => setReaderDate(null), []);
 
   const changeTab = useCallback((next: Tab) => {
@@ -36,24 +39,42 @@ export default function App() {
     setReaderDate(null);
   }, []);
 
+  const editUrgeOn = useCallback(
+    (date: string) => (urge: Urge) => setSheet({ kind: "edit", date, urge }),
+    []
+  );
+
   const saveUrge = useCallback(
     (draft: Omit<Urge, "id">) => {
-      journal.logUrge(draft);
-      setSheetOpen(false);
-      // Land back on the day it belongs to, where it has just appeared in the
-      // timeline under the entry.
-      setTab("today");
+      if (!sheet) return;
+      if (sheet.kind === "new") {
+        journal.logUrge(journal.todayDate, draft);
+        // Land back on the day it belongs to, where it has just appeared in the
+        // timeline under the entry.
+        setTab("today");
+      } else {
+        journal.updateUrge(sheet.date, sheet.urge.id, draft);
+      }
+      setSheet(null);
     },
-    [journal]
+    [journal, sheet]
   );
+
+  const deleteUrge = useCallback(() => {
+    if (sheet?.kind !== "edit") return;
+    journal.deleteUrge(sheet.date, sheet.urge.id);
+    setSheet(null);
+  }, [journal, sheet]);
 
   return (
     <div className="app">
       <div className="column" id="screen" role="tabpanel" aria-labelledby={`tab-${tab}`}>
-        {tab === "today" && <TodayView journal={journal} />}
+        {tab === "today" && (
+          <TodayView journal={journal} onEditUrge={editUrgeOn(journal.todayDate)} />
+        )}
         {tab === "archive" && (
           <ArchiveView
-            days={journal.days}
+            journal={journal}
             query={query}
             onQueryChange={setQuery}
             onOpen={setReaderDate}
@@ -62,14 +83,34 @@ export default function App() {
         {tab === "insights" && <InsightsView days={journal.days} />}
       </div>
 
-      {reader && <ReaderOverlay day={reader} onClose={closeReader} />}
+      {reader && (
+        <ReaderOverlay
+          day={reader}
+          journal={journal}
+          onClose={closeReader}
+          onEditUrge={editUrgeOn(reader.date)}
+        />
+      )}
 
-      {sheetOpen && <UrgeSheet onClose={closeSheet} onSave={saveUrge} />}
+      {sheet?.kind === "new" && <UrgeSheet onClose={closeSheet} onSave={saveUrge} />}
+      {sheet?.kind === "edit" && (
+        <UrgeSheet
+          editing={sheet.urge}
+          onClose={closeSheet}
+          onSave={saveUrge}
+          onDelete={deleteUrge}
+        />
+      )}
 
       {/* Always within reach, on every screen — except while something is
           already covering the app. */}
-      {!sheetOpen && !reader && (
-        <button ref={fabRef} type="button" className="fab" onClick={() => setSheetOpen(true)}>
+      {!sheet && !reader && (
+        <button
+          ref={fabRef}
+          type="button"
+          className="fab"
+          onClick={() => setSheet({ kind: "new" })}
+        >
           Log urge
         </button>
       )}

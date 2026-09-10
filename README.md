@@ -14,7 +14,9 @@ npm install
 npm run dev        # development server
 npm run build      # typecheck, bundle, and stamp the service worker
 npm run preview    # serve the built app (needed to exercise the service worker)
-npm run typecheck
+npm run typecheck  # the app, and the tests and build config
+npm test           # unit tests
+npm run test:e2e   # end-to-end tests (builds and serves the app itself)
 ```
 
 The service worker only registers over HTTPS or on `localhost`, so use
@@ -27,12 +29,16 @@ attaches to the day rather than the other way round.
 
 - **Today** — the date, a rotating writing prompt that steps aside as soon as
   there's writing on the page, an editor that grows as you type, mood and energy
-  on 1–5, hours slept, and a quiet row of habits. Urges logged today appear as a
-  timeline under the entry.
+  on 1–5, hours slept, and a quiet row of habits you can add to and prune. Urges
+  logged today appear as a timeline under the entry.
 - **Urge log** — a bottom sheet, not a screen. Intensity, a trigger chip, two
-  free-text lines, and two closing buttons of identical weight.
+  free-text lines, and two closing buttons of identical weight. Tapping an urge
+  already logged reopens the same sheet to correct or delete it, keeping the
+  minute it was logged at.
 - **Archive** — reverse-chronological, searchable, with an "on this day" card
-  surfacing one month and one year back.
+  surfacing one month and one year back, and, at the foot of the page, the way
+  to get a copy of the journal out and back in. Opening an entry opens the day
+  itself: the writing, its urges and its measures are all still editable.
 - **Insights** — clean days as a share of the last 30, urges by hour, mood over
   time, and urges per night grouped by hours slept.
 
@@ -41,10 +47,27 @@ attaches to the day rather than the other way round.
 These are constraints from the design brief, not defaults. They're easy to
 undo by accident:
 
-- **"Clean days" is a fraction, never a streak.** It's counted over 30 calendar
-  days, not over days you opened the app, and a single bad day moves it by one
-  rather than resetting it to zero. A day you never touched counts as clean:
-  the stat measures the thing being tracked, not your attendance.
+- **"Clean days" is a fraction, never a streak.** A single bad day moves it by
+  one rather than resetting it to zero, and inside the window it's counted over
+  calendar days rather than days you opened the app — a day you never touched
+  counts as clean. The stat measures the thing being tracked, not your
+  attendance.
+
+  The denominator is the journal's own history, not a flat 30. The window runs
+  back to the first day anything was recorded and grows from there, capping at
+  30: a fresh install reads `0 / 0`, then `1 / 1`, then `10 / 10`. That avoids
+  both failure modes. An empty journal is arithmetically a perfect month, so a
+  fixed denominator would open on `30 / 30` — praise for a month nobody lived,
+  which is the gamification the brief rules out arriving from the flattering
+  side. A fixed denominator with a zero on top would be the opposite lie: a
+  failed month nobody failed.
+
+- **Nothing is recorded that you didn't record.** Sleep is blank until it is
+  set, rather than starting at seven hours. A default written into the day is
+  indistinguishable from data: it shows up as "7h sleep" in the reader, and as
+  a seven-hour night in "sleep vs urges", for a night nobody entered. The first
+  press of either stepper button writes down the default, so recording a normal
+  night still takes one tap.
 - **"Rode it out" and "Gave in" are the same size and the same colour.** Neither
   is styled as a reward or a punishment, and there is no red anywhere on the
   "gave in" path. Logging either one is the same act.
@@ -61,12 +84,19 @@ undo by accident:
 src/
   App.tsx              screen switching, overlays, the floating log button
   components/          one file per surface, plus the shared 1–5 scale
+  components/DayEditor.tsx  one day, open for writing — used by Today and the reader
+  components/HabitRow.tsx   the habit chips, and the panel that edits the list
   hooks/useJournal.ts  the journal: today, mutations, persistence
   hooks/useOverlay.ts  escape-to-close, scroll lock, focus restore
   lib/date.ts          local-calendar dates and clock formatting
   lib/insights.ts      the four derived statistics
   lib/storage.ts       load, save, and validate what comes back
+  lib/transfer.ts      the export file, and reading one back
+  lib/habits.ts        naming, de-duplicating and merging the habit list
+  lib/*.test.ts        unit tests, next to what they cover
   styles.css           design tokens and every rule in the app
+test/                  a localStorage stub and fixtures for the unit tests
+e2e/                   Playwright specs, including the invariant suite
 public/
   sw.js                service worker (precache list stamped in at build time)
   fonts/               self-hosted Newsreader, Instrument Sans, IBM Plex Mono
@@ -89,6 +119,58 @@ tomorrow for anyone west of Greenwich.
 Relatedly, the app does not roll over to a new day while you have it open and
 are writing. It re-checks the date when you reopen or refocus it.
 
+### A past day is the day itself
+
+The reader is a reading surface — the writing keeps the same serif at the same
+size it has everywhere else — but it is not a printout. It renders the same
+`DayEditor` Today does, so a typo three months old can be fixed, a mood can be
+set after the fact, and an urge logged in the wrong minute can be corrected or
+removed. Every mutation on `useJournal` takes the date it applies to; there is
+no separate path for "today" that the archive lacks.
+
+Deleting an urge asks first. It is the only action in the app that removes
+something already written, and it is still typographic and unaccented — a
+delete confirmation is not where this app starts using red.
+
+The urge sheet can open on top of the reader, so `useOverlay` keeps a stack and
+only the topmost overlay answers Escape and traps Tab. Without that, one press
+would close the sheet and the entry behind it together.
+
+### Habits are yours to choose
+
+The four that ship (`DEFAULT_HABITS`) are a starting point, not the set. The
+list lives on the journal rather than in the code, so it is per-device data and
+travels in an export like everything else.
+
+Removing one is a decision about what to track from here, not permission to
+rewrite the past: a day that already ticked "Gym" goes on showing "Gym" after
+the habit is dropped from the list. `habitsForDay` is what makes that true, by
+rendering the union of the current list and whatever that day recorded.
+
+Names are trimmed, whitespace-collapsed, length-bounded and compared without
+regard to case, so "walk" can't join "Walk" in the row.
+
+### Getting a copy out
+
+There is no server, so a cleared browser or a lost phone is the end of the
+journal. The foot of the Archive writes the whole thing out as indented JSON —
+`nightly-2026-09-09.json` — carrying a `format` tag and a `version` so a file
+can be recognised, and refused, rather than half-understood by a build that
+predates it.
+
+Importing **merges**. A day the file has and this device does not is added; a
+day this device has and the file does not is kept; where both hold the same
+date, the file wins. Habit lists are unioned rather than replaced, so carrying
+a journal between a phone and a desktop doesn't cost either device a habit the
+other hadn't heard of. Because that last case is the only thing in the app that
+can overwrite something already written, the import happens in two steps: it
+counts what it is about to add and replace, says so, and waits.
+
+An imported file is put through the same validators as anything coming out of
+`localStorage` — a file off someone's disk deserves exactly as much suspicion,
+and a single malformed day should cost that day rather than the import. A copy
+taken straight out of `localStorage`, with no `format` tag, still restores.
+
 ### Fonts
 
 The three families are self-hosted rather than linked from Google Fonts: this is
@@ -96,6 +178,49 @@ a private, offline-first app and a cold start shouldn't have to announce itself
 to a third party first. `scripts/fetch-fonts.mjs` regenerates
 `public/fonts/fonts.css`, keeping the `latin` and `latin-ext` subsets and
 deduplicating the variable-font files Google serves once per weight.
+
+## Tests
+
+Unit tests sit next to the code they cover (`src/lib/*.test.ts`) and run in Node
+against a stub for `localStorage` (`test/localStorage.ts`), which also does the
+two things a real browser does and jsdom will not: refuse to be read at all
+(private mode, blocked site data) and refuse a write (out of quota). Both paths
+are ones the app is written to survive silently.
+
+The suite runs in `America/Los_Angeles` rather than UTC. Every date in this app
+is built from local components precisely so that late-evening entries file under
+the right night, and a suite run in UTC would pass whether or not that still
+held.
+
+End-to-end tests run against a real build served over HTTP, because that is the
+only place the service worker exists — `npm run build` stamps its precache list,
+so offline behaviour cannot be exercised from the dev server at all. One of the
+specs cuts the network and opens the app in a fresh page, which is the case
+installing it is for.
+
+`test/service-worker.test.ts` covers the worker itself, loaded the way a browser
+loads it — evaluated against a stub `self`, with the precache list stamped in as
+the build stamps it. That reaches the cases a browser test cannot stage: what
+the worker does when the network answers a navigation with a 404 or a 502, which
+it must not mistake for the app and cache over the working shell.
+
+### The invariant suite
+
+`e2e/invariants.spec.ts` covers the constraints in "Things that are deliberate".
+Those are the rules a well-meaning change undoes most easily, and the ones no
+other test would notice:
+
+- both urge outcomes render at the same size, in the same colours
+- no recognisably red colour appears anywhere on the "gave in" path — measured
+  in hue, so it can tell red from the app's own warm sand accent at 32°
+- the headline is a fraction, one bad day moves it by one, and it opens at
+  `0 / 0` rather than claiming a month the journal has not lived
+- no streak, badge, XP or congratulation vocabulary on any screen
+- empty states match their copy exactly and contain no scolding words
+- the tab bar contains no icons
+
+Each one was checked by breaking the thing it protects and confirming the test
+fails, rather than only by watching it pass.
 
 ## Where this came from
 
