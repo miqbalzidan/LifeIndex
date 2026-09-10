@@ -13,6 +13,7 @@ import type { Journal } from "../types.ts";
 
 const journalOf = (...days: ReturnType<typeof day>[]): Journal => ({
   days: Object.fromEntries(days.map((d) => [d.date, d])),
+  habits: ["Walk", "Read"],
   promptSkips: 0,
 });
 
@@ -130,7 +131,26 @@ describe("readImport", () => {
       expect(Object.keys(local.days)).toHaveLength(2);
     });
 
-    it("keeps the higher prompt-skip count", () => {
+    it("carries the habit list so a second device gets the same habits", () => {
+      const file = serialiseExport(journalOf(day("2026-09-08", { text: "x" })));
+      expect(JSON.parse(file).habits).toEqual(["Walk", "Read"]);
+    });
+
+    it("unions the habit lists rather than letting either device lose one", () => {
+      const mine: Journal = { days: {}, habits: ["Walk", "Water"], promptSkips: 0 };
+      const result = readImport(
+        JSON.stringify({
+          format: EXPORT_FORMAT,
+          days: sample.days,
+          habits: ["Read", "Walk", "Stretch"],
+        }),
+        mine
+      );
+      if (!result.ok) throw new Error("expected the import to be readable");
+      expect(result.journal.habits).toEqual(["Walk", "Water", "Read", "Stretch"]);
+    });
+
+  it("keeps the higher prompt-skip count", () => {
       const result = readImport(file({ format: EXPORT_FORMAT, days: sample.days, promptSkips: 9 }), {
         ...local,
         promptSkips: 3,

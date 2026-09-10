@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { blankDay, dayHasContent, loadJournal, saveJournal } from "../lib/storage.ts";
 import { DEFAULT_SLEEP, SLEEP_MAX, SLEEP_MIN } from "../lib/constants.ts";
+import { addHabit as addToList, removeHabit as removeFromList } from "../lib/habits.ts";
 import { todayIso } from "../lib/date.ts";
 import type { Day, Journal, Urge } from "../types.ts";
 
@@ -48,6 +49,8 @@ export interface JournalApi {
   journal: Journal;
   today: Day;
   todayDate: string;
+  /** The habit list on offer, in the order it is shown. */
+  habits: string[];
   promptSkips: number;
   patchDay: (date: string, patch: Partial<Omit<Day, "date">>) => void;
   toggleHabit: (date: string, habit: string) => void;
@@ -56,6 +59,9 @@ export interface JournalApi {
   updateUrge: (date: string, id: string, draft: Omit<Urge, "id">) => void;
   deleteUrge: (date: string, id: string) => void;
   skipPrompt: () => void;
+  /** Returns why the habit was refused, or `null` once it is added. */
+  addHabit: (name: string) => string | null;
+  removeHabit: (habit: string) => void;
   replaceJournal: (next: Journal) => void;
 }
 
@@ -173,6 +179,24 @@ export function useJournal(): JournalApi {
     setJournal((prev) => ({ ...prev, promptSkips: prev.promptSkips + 1 }));
   }, []);
 
+  /**
+   * Adding is validated against the list as it stands, so the refusal can say
+   * which rule was hit. It reads the ref rather than closing over the list,
+   * which keeps the callback stable across every keystroke elsewhere.
+   */
+  const addHabit = useCallback((name: string): string | null => {
+    const result = addToList(latest.current.habits, name);
+    if (!result.ok) return result.reason;
+    setJournal((prev) => ({ ...prev, habits: result.habits }));
+    return null;
+  }, []);
+
+  // Only the list changes: a day that already ticked this habit keeps it, and
+  // goes on showing it.
+  const removeHabit = useCallback((habit: string) => {
+    setJournal((prev) => ({ ...prev, habits: removeFromList(prev.habits, habit) }));
+  }, []);
+
   // Persisted by the same debounce as everything else; an import is just a
   // large edit.
   const replaceJournal = useCallback((next: Journal) => setJournal(next), []);
@@ -182,6 +206,7 @@ export function useJournal(): JournalApi {
     journal,
     today,
     todayDate,
+    habits: journal.habits,
     promptSkips: journal.promptSkips,
     patchDay,
     toggleHabit,
@@ -190,6 +215,8 @@ export function useJournal(): JournalApi {
     updateUrge,
     deleteUrge,
     skipPrompt,
+    addHabit,
+    removeHabit,
     replaceJournal,
   };
 }

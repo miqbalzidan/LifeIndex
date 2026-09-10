@@ -29,8 +29,8 @@ attaches to the day rather than the other way round.
 
 - **Today** — the date, a rotating writing prompt that steps aside as soon as
   there's writing on the page, an editor that grows as you type, mood and energy
-  on 1–5, hours slept, and a quiet row of habits. Urges logged today appear as a
-  timeline under the entry.
+  on 1–5, hours slept, and a quiet row of habits you can add to and prune. Urges
+  logged today appear as a timeline under the entry.
 - **Urge log** — a bottom sheet, not a screen. Intensity, a trigger chip, two
   free-text lines, and two closing buttons of identical weight. Tapping an urge
   already logged reopens the same sheet to correct or delete it, keeping the
@@ -47,18 +47,20 @@ attaches to the day rather than the other way round.
 These are constraints from the design brief, not defaults. They're easy to
 undo by accident:
 
-- **"Clean days" is a fraction, never a streak.** It's counted over 30 calendar
-  days, not over days you opened the app, and a single bad day moves it by one
-  rather than resetting it to zero. A day you never touched counts as clean:
-  the stat measures the thing being tracked, not your attendance.
+- **"Clean days" is a fraction, never a streak.** A single bad day moves it by
+  one rather than resetting it to zero, and inside the window it's counted over
+  calendar days rather than days you opened the app — a day you never touched
+  counts as clean. The stat measures the thing being tracked, not your
+  attendance.
 
-  The figure is held back until seven days have been recorded. An empty journal
-  is arithmetically a perfect month, so a new install would otherwise open on
-  `30 / 30` — praise for a month that hasn't happened yet, which is the same
-  gamification the brief rules out arriving from the flattering side. The
-  arithmetic in `countCleanDays` is untouched; only whether it is shown. The
-  other three panels already waited for their data; this was the one that
-  didn't.
+  The denominator is the journal's own history, not a flat 30. The window runs
+  back to the first day anything was recorded and grows from there, capping at
+  30: a fresh install reads `0 / 0`, then `1 / 1`, then `10 / 10`. That avoids
+  both failure modes. An empty journal is arithmetically a perfect month, so a
+  fixed denominator would open on `30 / 30` — praise for a month nobody lived,
+  which is the gamification the brief rules out arriving from the flattering
+  side. A fixed denominator with a zero on top would be the opposite lie: a
+  failed month nobody failed.
 
 - **Nothing is recorded that you didn't record.** Sleep is blank until it is
   set, rather than starting at seven hours. A default written into the day is
@@ -83,12 +85,14 @@ src/
   App.tsx              screen switching, overlays, the floating log button
   components/          one file per surface, plus the shared 1–5 scale
   components/DayEditor.tsx  one day, open for writing — used by Today and the reader
+  components/HabitRow.tsx   the habit chips, and the panel that edits the list
   hooks/useJournal.ts  the journal: today, mutations, persistence
   hooks/useOverlay.ts  escape-to-close, scroll lock, focus restore
   lib/date.ts          local-calendar dates and clock formatting
   lib/insights.ts      the four derived statistics
   lib/storage.ts       load, save, and validate what comes back
   lib/transfer.ts      the export file, and reading one back
+  lib/habits.ts        naming, de-duplicating and merging the habit list
   lib/*.test.ts        unit tests, next to what they cover
   styles.css           design tokens and every rule in the app
 test/                  a localStorage stub and fixtures for the unit tests
@@ -132,6 +136,20 @@ The urge sheet can open on top of the reader, so `useOverlay` keeps a stack and
 only the topmost overlay answers Escape and traps Tab. Without that, one press
 would close the sheet and the entry behind it together.
 
+### Habits are yours to choose
+
+The four that ship (`DEFAULT_HABITS`) are a starting point, not the set. The
+list lives on the journal rather than in the code, so it is per-device data and
+travels in an export like everything else.
+
+Removing one is a decision about what to track from here, not permission to
+rewrite the past: a day that already ticked "Gym" goes on showing "Gym" after
+the habit is dropped from the list. `habitsForDay` is what makes that true, by
+rendering the union of the current list and whatever that day recorded.
+
+Names are trimmed, whitespace-collapsed, length-bounded and compared without
+regard to case, so "walk" can't join "Walk" in the row.
+
 ### Getting a copy out
 
 There is no server, so a cleared browser or a lost phone is the end of the
@@ -142,7 +160,9 @@ predates it.
 
 Importing **merges**. A day the file has and this device does not is added; a
 day this device has and the file does not is kept; where both hold the same
-date, the file wins. Because that last case is the only thing in the app that
+date, the file wins. Habit lists are unioned rather than replaced, so carrying
+a journal between a phone and a desktop doesn't cost either device a habit the
+other hadn't heard of. Because that last case is the only thing in the app that
 can overwrite something already written, the import happens in two steps: it
 counts what it is about to add and replace, says so, and waits.
 
@@ -193,8 +213,8 @@ other test would notice:
 - both urge outcomes render at the same size, in the same colours
 - no recognisably red colour appears anywhere on the "gave in" path — measured
   in hue, so it can tell red from the app's own warm sand accent at 32°
-- the headline is a fraction of a fixed window, one bad day moves it by one, and
-  it waits for seven recorded days rather than opening on a perfect month
+- the headline is a fraction, one bad day moves it by one, and it opens at
+  `0 / 0` rather than claiming a month the journal has not lived
 - no streak, badge, XP or congratulation vocabulary on any screen
 - empty states match their copy exactly and contain no scolding words
 - the tab bar contains no icons

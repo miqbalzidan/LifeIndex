@@ -152,30 +152,32 @@ test.describe("the two urge outcomes carry equal weight", () => {
 });
 
 test.describe("clean days is a share, never a streak", () => {
-  test("the headline reads as a fraction of a fixed window", async ({ page }) => {
-    await seedRecentDays(page, 10);
+  test("opens at 0 / 0 rather than claiming a month it has not lived", async ({ page }) => {
+    await page.goto("/");
     await page.getByRole("tab", { name: "Insights" }).click();
 
-    await expect(page.locator(".headline-of")).toHaveText("/ 30");
+    // Not 30 / 30 (a perfect month nobody lived) and not 0 / 30 (a failed one
+    // nobody failed): the window is the journal's own history, and there is
+    // none yet.
+    await expect(page.locator(".headline-value")).toHaveText("0");
+    await expect(page.locator(".headline-of")).toHaveText("/ 0");
     await expect(page.locator(".headline-note")).toContainText("not a streak");
   });
 
-  test("waits for enough recorded days rather than opening on a perfect month", async ({
-    page,
-  }) => {
-    await page.goto("/");
+  test("the window grows from first use and caps at 30", async ({ page }) => {
+    await seedRecentDays(page, 1);
     await page.getByRole("tab", { name: "Insights" }).click();
-    await expect(page.locator(".headline-value")).toHaveCount(0);
-    await expect(page.locator(".headline-empty")).toContainText("Not enough days recorded yet.");
+    await expect(page.locator(".headline-figure")).toContainText("1");
+    await expect(page.locator(".headline-of")).toHaveText("/ 1");
 
-    // Six recorded days is still not enough; the seventh brings it in.
-    await seedRecentDays(page, 6);
+    await seedRecentDays(page, 10);
     await page.getByRole("tab", { name: "Insights" }).click();
-    await expect(page.locator(".headline-value")).toHaveCount(0);
+    await expect(page.locator(".headline-of")).toHaveText("/ 10");
 
-    await seedRecentDays(page, 7);
+    await seedRecentDays(page, 40);
     await page.getByRole("tab", { name: "Insights" }).click();
-    await expect(page.locator(".headline-value")).toHaveText("30");
+    await expect(page.locator(".headline-of")).toHaveText("/ 30");
+    await expect(page.locator(".headline-note")).toContainText("not a streak");
   });
 
   test("a bad day moves the number by one, not to zero", async ({ page }) => {
@@ -198,11 +200,26 @@ test.describe("clean days is a share, never a streak", () => {
 
     for (const tab of ["Today", "Archive", "Insights"] as const) {
       await page.getByRole("tab", { name: tab }).click();
-      const text = await page.locator("body").innerText();
-      expect(text, tab).not.toMatch(banned);
+      expect(await appVoice(page), tab).not.toMatch(banned);
     }
   });
 });
+
+/**
+ * Reads the screen as the app speaks in its own voice.
+ *
+ * The rotating writing prompt is excluded: it is fixed copy from the brief, and
+ * one of the seven ("What did today ask of you that you didn't expect?")
+ * contains a word the sweep below bans. Since the prompt rotates with the day
+ * number, leaving it in made this test fail one day in seven.
+ */
+async function appVoice(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const clone = document.body.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll(".prompt-text").forEach((el) => el.remove());
+    return clone.innerText ?? clone.textContent ?? "";
+  });
+}
 
 test("empty states say what a page is for and nothing about missing days", async ({ page }) => {
   await page.goto("/");
@@ -215,9 +232,6 @@ test("empty states say what a page is for and nothing about missing days", async
   );
 
   await page.getByRole("tab", { name: "Insights" }).click();
-  await expect(page.locator(".headline-empty")).toHaveText(
-    "Clean days will show here as a share of the last 30 — never a streak. Not enough days recorded yet."
-  );
   await expect(page.locator(".panel-empty")).toHaveText([
     "No urges logged yet.",
     "No moods noted yet.",
@@ -226,7 +240,7 @@ test("empty states say what a page is for and nothing about missing days", async
 
   for (const tab of ["Today", "Archive", "Insights"] as const) {
     await page.getByRole("tab", { name: tab }).click();
-    expect(await page.locator("body").innerText(), tab).not.toMatch(scolding);
+    expect(await appVoice(page), tab).not.toMatch(scolding);
   }
 });
 

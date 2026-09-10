@@ -10,7 +10,8 @@ interface TodayViewProps {
 }
 
 export function TodayView({ journal, onEditUrge }: TodayViewProps) {
-  const { today, todayDate, promptSkips, patchDay, toggleHabit, adjustSleep, skipPrompt } = journal;
+  const { today, todayDate, promptSkips, patchDay, toggleHabit, adjustSleep, skipPrompt } =
+    journal;
 
   // The prompt rotates with the day and again each time it's skipped, so it
   // isn't the same question waiting every night.
@@ -40,10 +41,13 @@ export function TodayView({ journal, onEditUrge }: TodayViewProps) {
 
       <DayEditor
         day={today}
+        habits={journal.habits}
         timelineLabel="Today's urges"
         placeholder="Write as much or as little as you like."
         onPatch={(patch) => patchDay(todayDate, patch)}
         onToggleHabit={(habit) => toggleHabit(todayDate, habit)}
+        onAddHabit={journal.addHabit}
+        onRemoveHabit={journal.removeHabit}
         onAdjustSleep={(delta) => adjustSleep(todayDate, delta)}
         onEditUrge={onEditUrge}
       />

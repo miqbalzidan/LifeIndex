@@ -22,6 +22,7 @@ export interface Day {
   energy: Rating | null;
   /** Hours, in half-hour steps, or `null` if it was never recorded. */
   sleep: number | null;
+  /** Names of the habits ticked on this day. */
   habits: string[];
   urges: Urge[];
 }
@@ -31,6 +32,8 @@ export type Tab = "today" | "archive" | "insights";
 export interface Journal {
   /** Sparse: only days the user has actually touched. Keyed by `Day.date`. */
   days: Record<string, Day>;
+  /** The habits on offer, in the order they are shown. The user's to edit. */
+  habits: string[];
   /** How many times the prompt has been skipped, ever. */
   promptSkips: number;
 }

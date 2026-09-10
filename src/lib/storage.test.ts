@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { installStorage, type FakeStorage } from "../../test/localStorage.ts";
 import { day, urge } from "../../test/factory.ts";
-import { DEFAULT_SLEEP, SLEEP_MAX, SLEEP_MIN } from "./constants.ts";
+import { DEFAULT_HABITS, DEFAULT_SLEEP, SLEEP_MAX, SLEEP_MIN } from "./constants.ts";
 import { blankDay, dayHasContent, emptyJournal, loadJournal, saveJournal } from "./storage.ts";
 
 const KEY = "nightly.journal.v1";
@@ -41,6 +41,7 @@ describe("loadJournal", () => {
   it("round-trips a journal it wrote itself", () => {
     const journal = {
       days: { "2026-09-09": day("2026-09-09", { text: "hello", mood: 4, urges: [urge()] }) },
+      habits: ["Walk", "Stretch"],
       promptSkips: 3,
     };
     saveJournal(journal);
@@ -152,6 +153,33 @@ describe("urge validation", () => {
     for (const outcome of ["rode", "GAVE", "gave in", true, null, undefined]) {
       expect(withUrges([{ t: 1, outcome }])[0]?.outcome).toBe("rode");
     }
+  });
+});
+
+describe("the habit list", () => {
+  it("starts a new journal with the defaults", () => {
+    expect(loadJournal().habits).toEqual(DEFAULT_HABITS);
+    expect(emptyJournal().habits).toEqual(DEFAULT_HABITS);
+  });
+
+  it("gives the defaults to a journal written before habits were editable", () => {
+    store({ days: {}, promptSkips: 0 });
+    expect(loadJournal().habits).toEqual(DEFAULT_HABITS);
+  });
+
+  it("keeps an empty list, because removing them all is a choice", () => {
+    store({ days: {}, habits: [], promptSkips: 0 });
+    expect(loadJournal().habits).toEqual([]);
+  });
+
+  it("drops what it cannot use and keeps the order of the rest", () => {
+    store({ days: {}, habits: ["Walk", 3, "", "   ", "walk", null, "Read"], promptSkips: 0 });
+    expect(loadJournal().habits).toEqual(["Walk", "Read"]);
+  });
+
+  it("falls back to the defaults when the list is not a list", () => {
+    store({ days: {}, habits: "Walk", promptSkips: 0 });
+    expect(loadJournal().habits).toEqual(DEFAULT_HABITS);
   });
 });
 

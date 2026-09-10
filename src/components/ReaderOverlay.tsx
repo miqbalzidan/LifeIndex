@@ -41,10 +41,13 @@ export function ReaderOverlay({ day, journal, onClose, onEditUrge }: ReaderOverl
 
         <DayEditor
           day={day}
+          habits={journal.habits}
           timelineLabel="Urges this day"
           placeholder="No writing this day."
           onPatch={(patch) => journal.patchDay(day.date, patch)}
           onToggleHabit={(habit) => journal.toggleHabit(day.date, habit)}
+          onAddHabit={journal.addHabit}
+          onRemoveHabit={journal.removeHabit}
           onAdjustSleep={(delta) => journal.adjustSleep(day.date, delta)}
           onEditUrge={onEditUrge}
         />

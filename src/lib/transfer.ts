@@ -1,4 +1,5 @@
 import { normaliseJournal } from "./storage.ts";
+import { mergeHabitLists } from "./habits.ts";
 import { toIso } from "./date.ts";
 import type { Journal } from "../types.ts";
 
@@ -25,6 +26,8 @@ export interface JournalExport {
   version: number;
   exportedAt: string;
   days: Journal["days"];
+  /** Carried so a second device gets the same habits, not just the same days. */
+  habits: string[];
   promptSkips: number;
 }
 
@@ -34,6 +37,7 @@ export function buildExport(journal: Journal, now: Date = new Date()): JournalEx
     version: EXPORT_VERSION,
     exportedAt: now.toISOString(),
     days: journal.days,
+    habits: journal.habits,
     promptSkips: journal.promptSkips,
   };
 }
@@ -112,6 +116,10 @@ export function readImport(text: string, current: Journal): ImportResult {
     // kept. The file wins only where both hold the same date.
     journal: {
       days: { ...current.days, ...incoming.days },
+      // Unioned rather than replaced: moving a journal between a phone and a
+      // desktop should not cost either device a habit the other had not heard
+      // of yet.
+      habits: mergeHabitLists(current.habits, incoming.habits),
       promptSkips: Math.max(current.promptSkips, incoming.promptSkips),
     },
     added,

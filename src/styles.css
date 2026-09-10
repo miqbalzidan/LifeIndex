@@ -509,6 +509,117 @@ input::placeholder {
   background: var(--accent);
 }
 
+
+/* Editing which habits exist: one panel behind one typographic control, so the
+   row itself stays a row of chips. No icons, here or anywhere. */
+.habit-edit {
+  background: none;
+  border: 0;
+  padding: 0 4px;
+  cursor: pointer;
+  align-self: center;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-34);
+}
+
+.habit-edit:hover {
+  color: var(--ink-60);
+}
+
+.habit-editor {
+  margin-top: 14px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--ink-12);
+}
+
+.habit-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.habit-list-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 14px;
+  color: var(--ink-80);
+}
+
+.habit-remove {
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-34);
+}
+
+.habit-remove:hover {
+  color: var(--ink-60);
+}
+
+.habit-empty {
+  font-size: 14px;
+  padding: 4px 0 2px;
+}
+
+.habit-add {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.habit-input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--ink-14);
+  outline: none;
+  padding: 6px 0;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  caret-color: var(--accent);
+}
+
+.habit-input:focus {
+  border-bottom-color: var(--accent-50);
+}
+
+.habit-submit {
+  background: none;
+  border: 0;
+  padding: 6px 0;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-58);
+}
+
+.habit-submit:hover {
+  color: var(--ink);
+}
+
+.habit-error,
+.habit-note {
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-42);
+}
+
 /* --- archive -------------------------------------------------------------- */
 
 .page-head {

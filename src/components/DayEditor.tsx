@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
+import { HabitRow } from "./HabitRow.tsx";
 import { Scale } from "./Scale.tsx";
-import { HABITS, SLEEP_MAX, SLEEP_MIN, SLEEP_STEP } from "../lib/constants.ts";
+import { SLEEP_MAX, SLEEP_MIN, SLEEP_STEP } from "../lib/constants.ts";
 import { formatTime } from "../lib/date.ts";
 import { plural, sleepLabel, urgeLine, wordCount } from "../lib/format.ts";
 import type { Day, Urge } from "../types.ts";
@@ -13,8 +14,12 @@ interface DayEditorProps {
   /** Heading over the timeline — "Today's urges" reads wrong on a Tuesday in March. */
   timelineLabel: string;
   placeholder: string;
+  /** The journal's habit list — what is on offer, in order. */
+  habits: string[];
   onPatch: (patch: Partial<Omit<Day, "date">>) => void;
   onToggleHabit: (habit: string) => void;
+  onAddHabit: (name: string) => string | null;
+  onRemoveHabit: (habit: string) => void;
   onAdjustSleep: (delta: number) => void;
   onEditUrge: (urge: Urge) => void;
 }
@@ -29,10 +34,13 @@ interface DayEditorProps {
  */
 export function DayEditor({
   day,
+  habits,
   timelineLabel,
   placeholder,
   onPatch,
   onToggleHabit,
+  onAddHabit,
+  onRemoveHabit,
   onAdjustSleep,
   onEditUrge,
 }: DayEditorProps) {
@@ -141,20 +149,13 @@ export function DayEditor({
         </div>
       </div>
 
-      <div className="habits">
-        {HABITS.map((habit) => (
-          <button
-            key={habit}
-            type="button"
-            className="habit"
-            aria-pressed={day.habits.includes(habit)}
-            onClick={() => onToggleHabit(habit)}
-          >
-            <span className="habit-dot" aria-hidden="true" />
-            {habit}
-          </button>
-        ))}
-      </div>
+      <HabitRow
+        day={day}
+        habits={habits}
+        onToggle={onToggleHabit}
+        onAdd={onAddHabit}
+        onRemove={onRemoveHabit}
+      />
     </>
   );
 }

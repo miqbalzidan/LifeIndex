@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { day, daysBefore, journalOf, urge } from "../../test/factory.ts";
-import { CHART_WINDOW_DAYS, CLEAN_MIN_DAYS, CLEAN_WINDOW_DAYS } from "./constants.ts";
+import { CHART_WINDOW_DAYS, CLEAN_WINDOW_DAYS } from "./constants.ts";
 import {
   buildHourHistogram,
   buildMoodSeries,
   buildSleepRows,
-  countCleanDays,
-  countRecordedDays,
+  cleanShare,
   hourNote,
 } from "./insights.ts";
 
@@ -16,90 +15,104 @@ const rodeOut = () => urge({ outcome: "rode" });
 
 /**
  * These are the constraints from the brief, not incidental behaviour. The
- * headline is a share of a fixed window and must never behave like a streak.
+ * headline is a share and must never behave like a streak.
  */
-describe("countCleanDays", () => {
-  it("counts every calendar day in the window, including untouched ones", () => {
-    expect(countCleanDays({}, NOW)).toBe(CLEAN_WINDOW_DAYS);
+describe("cleanShare", () => {
+  it("is 0 / 0 on a fresh install, claiming neither a perfect month nor a failed one", () => {
+    expect(cleanShare({}, NOW)).toEqual({ clean: 0, of: 0 });
   });
 
-  it("does not count attendance: writing without urges changes nothing", () => {
-    const written = journalOf(day(daysBefore(0, NOW), { text: "wrote something" }));
-    expect(countCleanDays(written, NOW)).toBe(CLEAN_WINDOW_DAYS);
+  it("opens at 1 / 1 on the first day something is recorded", () => {
+    const days = journalOf(day(daysBefore(0, NOW), { text: "the first night" }));
+    expect(cleanShare(days, NOW)).toEqual({ clean: 1, of: 1 });
+  });
+
+  it("reads 0 / 1 when the first day is one you gave in on", () => {
+    const days = journalOf(day(daysBefore(0, NOW), { urges: [gaveIn()] }));
+    expect(cleanShare(days, NOW)).toEqual({ clean: 0, of: 1 });
+  });
+
+  it("grows the window from the first recorded day", () => {
+    const days = journalOf(day(daysBefore(6, NOW), { text: "a week ago" }));
+    expect(cleanShare(days, NOW)).toEqual({ clean: 7, of: 7 });
+  });
+
+  it("stops growing at the window length", () => {
+    const days = journalOf(day(daysBefore(60, NOW), { text: "two months ago" }));
+    expect(cleanShare(days, NOW)).toEqual({
+      clean: CLEAN_WINDOW_DAYS,
+      of: CLEAN_WINDOW_DAYS,
+    });
+  });
+
+  it("does not count attendance inside the window: an untouched day is clean", () => {
+    // Recorded ten days ago and not opened since. Those nine silent days are
+    // still clean — the stat measures the thing being tracked, not whether you
+    // showed up.
+    const days = journalOf(day(daysBefore(9, NOW), { text: "the only entry" }));
+    expect(cleanShare(days, NOW)).toEqual({ clean: 10, of: 10 });
   });
 
   it("treats a day you rode out as clean", () => {
     const days = journalOf(day(daysBefore(3, NOW), { urges: [rodeOut(), rodeOut()] }));
-    expect(countCleanDays(days, NOW)).toBe(CLEAN_WINDOW_DAYS);
+    expect(cleanShare(days, NOW)).toEqual({ clean: 4, of: 4 });
   });
 
   it("costs exactly one day for a day you gave in", () => {
-    const days = journalOf(day(daysBefore(3, NOW), { urges: [gaveIn()] }));
-    expect(countCleanDays(days, NOW)).toBe(CLEAN_WINDOW_DAYS - 1);
+    const days = journalOf(
+      day(daysBefore(9, NOW), { text: "start" }),
+      day(daysBefore(3, NOW), { urges: [gaveIn()] })
+    );
+    expect(cleanShare(days, NOW)).toEqual({ clean: 9, of: 10 });
   });
 
   it("costs one day however many times you gave in that day", () => {
     const days = journalOf(
+      day(daysBefore(9, NOW), { text: "start" }),
       day(daysBefore(3, NOW), { urges: [gaveIn(), gaveIn(), gaveIn(), rodeOut()] })
     );
-    expect(countCleanDays(days, NOW)).toBe(CLEAN_WINDOW_DAYS - 1);
+    expect(cleanShare(days, NOW)).toEqual({ clean: 9, of: 10 });
   });
 
   it("never resets: a bad day does not erase the clean days around it", () => {
     // The failure this guards against is a streak counter, which would report
     // 0 here, or at best the length of the run since the last bad day.
     const days = journalOf(
+      day(daysBefore(29, NOW), { text: "start" }),
       day(daysBefore(1, NOW), { urges: [gaveIn()] }),
       day(daysBefore(15, NOW), { urges: [gaveIn()] }),
       day(daysBefore(28, NOW), { urges: [gaveIn()] })
     );
-    expect(countCleanDays(days, NOW)).toBe(CLEAN_WINDOW_DAYS - 3);
+    expect(cleanShare(days, NOW)).toEqual({ clean: CLEAN_WINDOW_DAYS - 3, of: CLEAN_WINDOW_DAYS });
   });
 
   it("keeps a single clean day visible in an otherwise bad month", () => {
     const everyDay = Array.from({ length: CLEAN_WINDOW_DAYS }, (_, i) =>
       day(daysBefore(i, NOW), { urges: [gaveIn()] })
     );
-    expect(countCleanDays(journalOf(...everyDay), NOW)).toBe(0);
+    expect(cleanShare(journalOf(...everyDay), NOW)).toEqual({ clean: 0, of: CLEAN_WINDOW_DAYS });
 
-    const oneGoodDay = everyDay.map((d, i) => (i === 10 ? day(d.date) : d));
-    expect(countCleanDays(journalOf(...oneGoodDay), NOW)).toBe(1);
+    const oneGoodDay = everyDay.map((d, i) => (i === 10 ? day(d.date, { text: "a good one" }) : d));
+    expect(cleanShare(journalOf(...oneGoodDay), NOW)).toEqual({
+      clean: 1,
+      of: CLEAN_WINDOW_DAYS,
+    });
   });
 
   it("ignores days that have fallen out of the window", () => {
     const lastDayInside = day(daysBefore(CLEAN_WINDOW_DAYS - 1, NOW), { urges: [gaveIn()] });
     const firstDayOutside = day(daysBefore(CLEAN_WINDOW_DAYS, NOW), { urges: [gaveIn()] });
 
-    expect(countCleanDays(journalOf(lastDayInside), NOW)).toBe(CLEAN_WINDOW_DAYS - 1);
-    expect(countCleanDays(journalOf(firstDayOutside), NOW)).toBe(CLEAN_WINDOW_DAYS);
-  });
-});
-
-describe("countRecordedDays", () => {
-  it("is zero on a fresh install, which is why the headline waits", () => {
-    expect(countRecordedDays({}, NOW)).toBe(0);
-    // The share itself is a full 30 out of 30 at that point — honest, but not
-    // yet a measurement of anything.
-    expect(countCleanDays({}, NOW)).toBe(CLEAN_WINDOW_DAYS);
-  });
-
-  it("counts days that hold something, inside the headline window only", () => {
-    const days = journalOf(
-      day(daysBefore(0, NOW), { text: "today" }),
-      day(daysBefore(CLEAN_MIN_DAYS, NOW), { urges: [rodeOut()] }),
-      day(daysBefore(CLEAN_WINDOW_DAYS, NOW), { text: "just outside the window" })
-    );
-    expect(countRecordedDays(days, NOW)).toBe(2);
-  });
-
-  it("reaches the threshold on the day the headline should appear", () => {
-    const recent = Array.from({ length: CLEAN_MIN_DAYS }, (_, i) =>
-      day(daysBefore(i, NOW), { text: "wrote" })
-    );
-    expect(countRecordedDays(journalOf(...recent.slice(0, CLEAN_MIN_DAYS - 1)), NOW)).toBe(
-      CLEAN_MIN_DAYS - 1
-    );
-    expect(countRecordedDays(journalOf(...recent), NOW)).toBe(CLEAN_MIN_DAYS);
+    expect(cleanShare(journalOf(lastDayInside), NOW)).toEqual({
+      clean: CLEAN_WINDOW_DAYS - 1,
+      of: CLEAN_WINDOW_DAYS,
+    });
+    // Still counted in the denominator via the window cap, but its own bad day
+    // is outside it.
+    expect(cleanShare(journalOf(firstDayOutside), NOW)).toEqual({
+      clean: CLEAN_WINDOW_DAYS,
+      of: CLEAN_WINDOW_DAYS,
+    });
   });
 });
 

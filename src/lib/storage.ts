@@ -1,4 +1,5 @@
-import { SLEEP_MAX, SLEEP_MIN } from "./constants.ts";
+import { DEFAULT_HABITS, SLEEP_MAX, SLEEP_MIN } from "./constants.ts";
+import { cleanHabitList } from "./habits.ts";
 import type { Day, Journal, Outcome, Rating, Urge } from "../types.ts";
 
 /**
@@ -7,7 +8,11 @@ import type { Day, Journal, Outcome, Rating, Urge } from "../types.ts";
  */
 const KEY = "nightly.journal.v1";
 
-export const emptyJournal = (): Journal => ({ days: {}, promptSkips: 0 });
+export const emptyJournal = (): Journal => ({
+  days: {},
+  habits: [...DEFAULT_HABITS],
+  promptSkips: 0,
+});
 
 export function blankDay(date: string): Day {
   return { date, text: "", mood: null, energy: null, sleep: null, habits: [], urges: [] };
@@ -75,8 +80,18 @@ export function normaliseJournal(parsed: unknown): Journal {
       if (day) days[date] = day;
     }
   }
+  // An absent habit list means a journal written before habits were editable,
+  // so it gets the defaults. An empty one means the user removed them all, and
+  // that is a choice to keep rather than undo.
+  const storedHabits = (parsed as Record<string, unknown>)["habits"];
+  const habits = Array.isArray(storedHabits) ? cleanHabitList(storedHabits) : [...DEFAULT_HABITS];
+
   const skips = (parsed as Record<string, unknown>)["promptSkips"];
-  return { days, promptSkips: typeof skips === "number" && skips >= 0 ? Math.floor(skips) : 0 };
+  return {
+    days,
+    habits,
+    promptSkips: typeof skips === "number" && skips >= 0 ? Math.floor(skips) : 0,
+  };
 }
 
 export function loadJournal(): Journal {
