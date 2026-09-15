@@ -165,7 +165,7 @@ test.describe("a file it cannot use", () => {
     [
       "empty",
       JSON.stringify({ format: "nightly.journal", version: 1, days: {} }),
-      "There are no entries in that file.",
+      "There is nothing in that file to bring over.",
     ],
   ] as const) {
     test(`says why it cannot read a file that is ${name}, and changes nothing`, async ({ page }) => {

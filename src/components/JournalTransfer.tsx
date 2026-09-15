@@ -27,6 +27,20 @@ export function JournalTransfer({ journal, onImport }: JournalTransferProps) {
   const [message, setMessage] = useState<string | null>(null);
 
   const dayCount = Object.keys(journal.days).length;
+  const taskCount = journal.tasks.length;
+  // There is something worth carrying as soon as anything has been put in,
+  // written entry or not — a plan set up on one device is exactly the thing you
+  // want to move to the other before you have written a word on it.
+  const hasSomething = dayCount > 0 || taskCount > 0;
+
+  /** "12 days and 4 tasks", leaving out whichever is zero. */
+  const describe = (days: number, tasks: number) =>
+    [
+      days > 0 ? `${days} ${plural(days, "day")}` : null,
+      tasks > 0 ? `${tasks} ${plural(tasks, "task")}` : null,
+    ]
+      .filter(Boolean)
+      .join(" and ");
 
   const save = () => {
     setPending(null);
@@ -40,7 +54,7 @@ export function JournalTransfer({ journal, onImport }: JournalTransferProps) {
     link.click();
     // Revoking synchronously can beat the download to the file.
     setTimeout(() => URL.revokeObjectURL(url), 0);
-    setMessage(`Saved ${dayCount} ${plural(dayCount, "day")} as ${name}.`);
+    setMessage(`Saved ${describe(dayCount, taskCount)} as ${name}.`);
   };
 
   const choose = async (file: File | undefined) => {
@@ -57,10 +71,10 @@ export function JournalTransfer({ journal, onImport }: JournalTransferProps) {
 
   const apply = () => {
     if (!pending) return;
-    const total = pending.added + pending.replaced;
+    const summary = describe(pending.added + pending.replaced, pending.tasksAdded);
     onImport(pending.journal);
     setPending(null);
-    setMessage(`Imported ${total} ${plural(total, "day")}.`);
+    setMessage(`Imported ${summary}.`);
   };
 
   return (
@@ -72,7 +86,7 @@ export function JournalTransfer({ journal, onImport }: JournalTransferProps) {
       </p>
 
       <div className="transfer-actions">
-        <button type="button" className="transfer-action" onClick={save} disabled={dayCount === 0}>
+        <button type="button" className="transfer-action" onClick={save} disabled={!hasSomething}>
           Export a copy
         </button>
         <button
@@ -99,8 +113,7 @@ export function JournalTransfer({ journal, onImport }: JournalTransferProps) {
       {pending && (
         <div className="transfer-confirm">
           <p className="transfer-note">
-            {pending.added + pending.replaced}{" "}
-            {plural(pending.added + pending.replaced, "day")} in that file.{" "}
+            {describe(pending.added + pending.replaced, pending.tasksAdded)} in that file.{" "}
             {pending.replaced > 0
               ? `${pending.replaced} ${plural(pending.replaced, "day")} already here will be replaced by the copy in the file.`
               : "Nothing already here will be replaced."}

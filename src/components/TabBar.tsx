@@ -2,6 +2,7 @@ import type { Tab } from "../types.ts";
 
 const TABS: [key: Tab, name: string][] = [
   ["today", "Today"],
+  ["plan", "Plan"],
   ["archive", "Archive"],
   ["insights", "Insights"],
 ];

@@ -2,8 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { blankDay, dayHasContent, loadJournal, saveJournal } from "../lib/storage.ts";
 import { DEFAULT_SLEEP, SLEEP_MAX, SLEEP_MIN } from "../lib/constants.ts";
 import { addHabit as addToList, removeHabit as removeFromList } from "../lib/habits.ts";
+import {
+  addTask as addToTasks,
+  clearDone as clearDoneTasks,
+  editTask as editInTasks,
+  removeTask as removeFromTasks,
+  toggleTask as toggleInTasks,
+} from "../lib/tasks.ts";
 import { todayIso } from "../lib/date.ts";
-import type { Day, Journal, Urge } from "../types.ts";
+import type { Day, Journal, Task, Urge } from "../types.ts";
 
 /** Keystrokes shouldn't each cost a full serialise-and-write of the archive. */
 const SAVE_DEBOUNCE_MS = 400;
@@ -51,6 +58,8 @@ export interface JournalApi {
   todayDate: string;
   /** The habit list on offer, in the order it is shown. */
   habits: string[];
+  /** The standing list of one-off tasks, in the order they were added. */
+  tasks: Task[];
   promptSkips: number;
   patchDay: (date: string, patch: Partial<Omit<Day, "date">>) => void;
   toggleHabit: (date: string, habit: string) => void;
@@ -62,6 +71,12 @@ export interface JournalApi {
   /** Returns why the habit was refused, or `null` once it is added. */
   addHabit: (name: string) => string | null;
   removeHabit: (habit: string) => void;
+  /** Returns why the task was refused, or `null` once it is added. */
+  addTask: (text: string) => string | null;
+  toggleTask: (id: string) => void;
+  editTask: (id: string, text: string) => void;
+  removeTask: (id: string) => void;
+  clearDoneTasks: () => void;
   replaceJournal: (next: Journal) => void;
 }
 
@@ -197,6 +212,29 @@ export function useJournal(): JournalApi {
     setJournal((prev) => ({ ...prev, habits: removeFromList(prev.habits, habit) }));
   }, []);
 
+  const addTask = useCallback((text: string): string | null => {
+    const result = addToTasks(latest.current.tasks, text);
+    if (!result.ok) return result.reason;
+    setJournal((prev) => ({ ...prev, tasks: result.tasks }));
+    return null;
+  }, []);
+
+  const toggleTask = useCallback((id: string) => {
+    setJournal((prev) => ({ ...prev, tasks: toggleInTasks(prev.tasks, id) }));
+  }, []);
+
+  const editTask = useCallback((id: string, text: string) => {
+    setJournal((prev) => ({ ...prev, tasks: editInTasks(prev.tasks, id, text) }));
+  }, []);
+
+  const removeTask = useCallback((id: string) => {
+    setJournal((prev) => ({ ...prev, tasks: removeFromTasks(prev.tasks, id) }));
+  }, []);
+
+  const clearDone = useCallback(() => {
+    setJournal((prev) => ({ ...prev, tasks: clearDoneTasks(prev.tasks) }));
+  }, []);
+
   // Persisted by the same debounce as everything else; an import is just a
   // large edit.
   const replaceJournal = useCallback((next: Journal) => setJournal(next), []);
@@ -207,6 +245,7 @@ export function useJournal(): JournalApi {
     today,
     todayDate,
     habits: journal.habits,
+    tasks: journal.tasks,
     promptSkips: journal.promptSkips,
     patchDay,
     toggleHabit,
@@ -217,6 +256,11 @@ export function useJournal(): JournalApi {
     skipPrompt,
     addHabit,
     removeHabit,
+    addTask,
+    toggleTask,
+    editTask,
+    removeTask,
+    clearDoneTasks: clearDone,
     replaceJournal,
   };
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArchiveView } from "./components/ArchiveView.tsx";
 import { InsightsView } from "./components/InsightsView.tsx";
+import { PlanView } from "./components/PlanView.tsx";
 import { ReaderOverlay } from "./components/ReaderOverlay.tsx";
 import { TabBar } from "./components/TabBar.tsx";
 import { TodayView } from "./components/TodayView.tsx";
@@ -72,6 +73,7 @@ export default function App() {
         {tab === "today" && (
           <TodayView journal={journal} onEditUrge={editUrgeOn(journal.todayDate)} />
         )}
+        {tab === "plan" && <PlanView journal={journal} />}
         {tab === "archive" && (
           <ArchiveView
             journal={journal}
