@@ -227,6 +227,10 @@ so offline behaviour cannot be exercised from the dev server at all. One of the
 specs cuts the network and opens the app in a fresh page, which is the case
 installing it is for.
 
+`test/styles.test.ts` checks that every `var(--token)` in the stylesheet refers
+to a property that exists — a typo there drops the declaration silently, with no
+error anywhere.
+
 `test/service-worker.test.ts` covers the worker itself, loaded the way a browser
 loads it — evaluated against a stub `self`, with the precache list stamped in as
 the build stamps it. That reaches the cases a browser test cannot stage: what
