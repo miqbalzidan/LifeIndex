@@ -42,6 +42,9 @@ describe("loadJournal", () => {
     const journal = {
       days: { "2026-09-09": day("2026-09-09", { text: "hello", mood: 4, urges: [urge()] }) },
       habits: ["Walk", "Stretch"],
+      tasks: [
+        { id: "t1", text: "Move the charger", done: false, added: "2026-09-01", doneOn: null },
+      ],
       promptSkips: 3,
     };
     saveJournal(journal);
@@ -180,6 +183,41 @@ describe("the habit list", () => {
   it("falls back to the defaults when the list is not a list", () => {
     store({ days: {}, habits: "Walk", promptSkips: 0 });
     expect(loadJournal().habits).toEqual(DEFAULT_HABITS);
+  });
+});
+
+describe("the standing task list", () => {
+  it("starts empty, unlike habits, which ship with defaults", () => {
+    expect(loadJournal().tasks).toEqual([]);
+    expect(emptyJournal().tasks).toEqual([]);
+  });
+
+  it("is empty for a journal written before the list existed", () => {
+    store({ days: {}, habits: [], promptSkips: 0 });
+    expect(loadJournal().tasks).toEqual([]);
+  });
+
+  it("drops entries with no usable text and keeps the rest in order", () => {
+    store({
+      days: {},
+      tasks: [
+        { id: "a", text: "First", done: false, added: "2026-09-01", doneOn: null },
+        { id: "b", text: "   ", done: false, added: "2026-09-01", doneOn: null },
+        "not a task",
+        { id: "c", text: "Second", done: true, added: "2026-09-02", doneOn: "2026-09-03" },
+      ],
+      promptSkips: 0,
+    });
+    expect(loadJournal().tasks.map((t) => t.text)).toEqual(["First", "Second"]);
+  });
+
+  it("refuses a finish date on a task that is not finished", () => {
+    store({
+      days: {},
+      tasks: [{ id: "a", text: "Open", done: false, added: "2026-09-01", doneOn: "2026-09-02" }],
+      promptSkips: 0,
+    });
+    expect(loadJournal().tasks[0]?.doneOn).toBeNull();
   });
 });
 

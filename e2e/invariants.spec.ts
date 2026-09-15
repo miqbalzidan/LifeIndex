@@ -198,7 +198,7 @@ test.describe("clean days is a share, never a streak", () => {
     const banned =
       /\bstreak of\b|\bday streak\b|\bin a row\b|🔥|\bbadge|\bXP\b|level up|congratulat|well done|keep it up|you're on|don't break/i;
 
-    for (const tab of ["Today", "Archive", "Insights"] as const) {
+    for (const tab of ["Today", "Plan", "Archive", "Insights"] as const) {
       await page.getByRole("tab", { name: tab }).click();
       expect(await appVoice(page), tab).not.toMatch(banned);
     }
@@ -238,7 +238,7 @@ test("empty states say what a page is for and nothing about missing days", async
     "Not enough nights recorded yet.",
   ]);
 
-  for (const tab of ["Today", "Archive", "Insights"] as const) {
+  for (const tab of ["Today", "Plan", "Archive", "Insights"] as const) {
     await page.getByRole("tab", { name: tab }).click();
     expect(await appVoice(page), tab).not.toMatch(scolding);
   }
@@ -248,7 +248,7 @@ test("navigation is typographic — there are no icons in the app", async ({ pag
   await page.goto("/");
 
   await expect(page.locator(".tabbar svg, .tabbar img, .tabbar canvas")).toHaveCount(0);
-  await expect(page.getByRole("tab")).toHaveText(["Today", "Archive", "Insights"]);
+  await expect(page.getByRole("tab")).toHaveText(["Today", "Plan", "Archive", "Insights"]);
 
   // The only <svg> in the app is the mood chart, which is a chart, not an icon.
   await page.getByRole("tab", { name: "Insights" }).click();

@@ -24,8 +24,9 @@ The service worker only registers over HTTPS or on `localhost`, so use
 
 ## The app
 
-Four surfaces, and the journal is the middle of all of them — everything else
-attaches to the day rather than the other way round.
+Five surfaces, and the journal is the middle of all of them — everything else
+attaches to the day rather than the other way round. The exception is the plan,
+which deliberately doesn't.
 
 - **Today** — the date, a rotating writing prompt that steps aside as soon as
   there's writing on the page, an editor that grows as you type, mood and energy
@@ -35,6 +36,8 @@ attaches to the day rather than the other way round.
   free-text lines, and two closing buttons of identical weight. Tapping an urge
   already logged reopens the same sheet to correct or delete it, keeping the
   minute it was logged at.
+- **Plan** — a standing list of things to do once. Not a daily checklist:
+  nothing here resets at midnight, and ticking something off is permanent.
 - **Archive** — reverse-chronological, searchable, with an "on this day" card
   surfacing one month and one year back, and, at the foot of the page, the way
   to get a copy of the journal out and back in. Opening an entry opens the day
@@ -86,6 +89,7 @@ src/
   components/          one file per surface, plus the shared 1–5 scale
   components/DayEditor.tsx  one day, open for writing — used by Today and the reader
   components/HabitRow.tsx   the habit chips, and the panel that edits the list
+  components/PlanView.tsx   the standing list of one-off tasks
   hooks/useJournal.ts  the journal: today, mutations, persistence
   hooks/useOverlay.ts  escape-to-close, scroll lock, focus restore
   lib/date.ts          local-calendar dates and clock formatting
@@ -93,6 +97,7 @@ src/
   lib/storage.ts       load, save, and validate what comes back
   lib/transfer.ts      the export file, and reading one back
   lib/habits.ts        naming, de-duplicating and merging the habit list
+  lib/tasks.ts         the standing list: adding, ticking, merging
   lib/*.test.ts        unit tests, next to what they cover
   styles.css           design tokens and every rule in the app
 test/                  a localStorage stub and fixtures for the unit tests
@@ -150,6 +155,24 @@ rendering the union of the current list and whatever that day recorded.
 Names are trimmed, whitespace-collapsed, length-bounded and compared without
 regard to case, so "walk" can't join "Walk" in the row.
 
+### A task is not a habit
+
+The two look alike and behave oppositely, so the distinction is worth stating.
+A **habit** is ticked again every night and starts the next day blank — "No
+phone in bed". A **task** is ticked once and stays ticked — "move the charger
+out of the bedroom". Habits live on the day; tasks live on the journal and
+carry over until you deal with them.
+
+That's also why the plan is its own screen rather than another row on Today.
+Nothing on it belongs to tonight, and putting it in the nightly round would
+make it feel like it did.
+
+Note what the screen deliberately doesn't do: no count of what's outstanding,
+no progress bar, no age on an open task. A list that tells you something has
+been waiting three weeks is a list that scolds, and the same rule that keeps
+"clean days" from becoming a streak applies here. `e2e/plan.spec.ts` and the
+invariant suite both check for it.
+
 ### Getting a copy out
 
 There is no server, so a cleared browser or a lost phone is the end of the
@@ -162,7 +185,13 @@ Importing **merges**. A day the file has and this device does not is added; a
 day this device has and the file does not is kept; where both hold the same
 date, the file wins. Habit lists are unioned rather than replaced, so carrying
 a journal between a phone and a desktop doesn't cost either device a habit the
-other hadn't heard of. Because that last case is the only thing in the app that
+other hadn't heard of. Tasks merge by id, and **done wins**: ticking something
+off on your phone must not be undone by importing an older copy from the
+desktop, and un-ticking is always available by hand.
+
+A file holding only a standing list and no days at all is a legitimate export —
+it's exactly what a second device produces before anything has been written on
+it — so neither the export button nor the importer requires a written day. Because that last case is the only thing in the app that
 can overwrite something already written, the import happens in two steps: it
 counts what it is about to add and replace, says so, and waits.
 

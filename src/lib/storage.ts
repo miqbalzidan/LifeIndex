@@ -1,5 +1,6 @@
 import { DEFAULT_HABITS, SLEEP_MAX, SLEEP_MIN } from "./constants.ts";
 import { cleanHabitList } from "./habits.ts";
+import { cleanTaskList } from "./tasks.ts";
 import type { Day, Journal, Outcome, Rating, Urge } from "../types.ts";
 
 /**
@@ -11,6 +12,7 @@ const KEY = "nightly.journal.v1";
 export const emptyJournal = (): Journal => ({
   days: {},
   habits: [...DEFAULT_HABITS],
+  tasks: [],
   promptSkips: 0,
 });
 
@@ -90,6 +92,7 @@ export function normaliseJournal(parsed: unknown): Journal {
   return {
     days,
     habits,
+    tasks: cleanTaskList((parsed as Record<string, unknown>)["tasks"]),
     promptSkips: typeof skips === "number" && skips >= 0 ? Math.floor(skips) : 0,
   };
 }

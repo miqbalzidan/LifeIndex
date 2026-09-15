@@ -14,6 +14,7 @@ import type { Journal } from "../types.ts";
 const journalOf = (...days: ReturnType<typeof day>[]): Journal => ({
   days: Object.fromEntries(days.map((d) => [d.date, d])),
   habits: ["Walk", "Read"],
+  tasks: [],
   promptSkips: 0,
 });
 
@@ -89,7 +90,19 @@ describe("readImport", () => {
 
   it("says so when there is nothing in the file to import", () => {
     const result = readImport(file(buildExport(emptyJournal())), emptyJournal());
-    expect(result).toMatchObject({ ok: false, reason: expect.stringContaining("no entries") });
+    expect(result).toMatchObject({ ok: false, reason: expect.stringContaining("nothing in that file") });
+  });
+
+  it("accepts a file that holds only a standing list, with no days at all", () => {
+    // What a second device exports before anything has been written on it.
+    const planOnly: Journal = {
+      days: {},
+      habits: [],
+      tasks: [{ id: "t1", text: "Move the charger", done: false, added: "2026-09-01", doneOn: null }],
+      promptSkips: 0,
+    };
+    const result = readImport(serialiseExport(planOnly), emptyJournal());
+    expect(result).toMatchObject({ ok: true, added: 0, replaced: 0, tasksAdded: 1 });
   });
 
   it("drops a malformed day rather than the whole file", () => {
@@ -137,7 +150,7 @@ describe("readImport", () => {
     });
 
     it("unions the habit lists rather than letting either device lose one", () => {
-      const mine: Journal = { days: {}, habits: ["Walk", "Water"], promptSkips: 0 };
+      const mine: Journal = { days: {}, habits: ["Walk", "Water"], tasks: [], promptSkips: 0 };
       const result = readImport(
         JSON.stringify({
           format: EXPORT_FORMAT,

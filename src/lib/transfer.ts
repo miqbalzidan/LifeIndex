@@ -1,5 +1,6 @@
 import { normaliseJournal } from "./storage.ts";
 import { mergeHabitLists } from "./habits.ts";
+import { mergeTaskLists } from "./tasks.ts";
 import { toIso } from "./date.ts";
 import type { Journal } from "../types.ts";
 
@@ -28,6 +29,8 @@ export interface JournalExport {
   days: Journal["days"];
   /** Carried so a second device gets the same habits, not just the same days. */
   habits: string[];
+  /** The standing list travels too — it is the least day-shaped thing here. */
+  tasks: Journal["tasks"];
   promptSkips: number;
 }
 
@@ -38,6 +41,7 @@ export function buildExport(journal: Journal, now: Date = new Date()): JournalEx
     exportedAt: now.toISOString(),
     days: journal.days,
     habits: journal.habits,
+    tasks: journal.tasks,
     promptSkips: journal.promptSkips,
   };
 }
@@ -59,6 +63,8 @@ export type ImportResult =
       added: number;
       /** Dates in the file that this device already has, which the file replaces. */
       replaced: number;
+      /** Standing tasks in the file that this device does not have. */
+      tasksAdded: number;
     }
   | { ok: false; reason: string };
 
@@ -99,8 +105,12 @@ export function readImport(text: string, current: Journal): ImportResult {
 
   const incoming = normaliseJournal(parsed);
   const dates = Object.keys(incoming.days);
-  if (dates.length === 0) {
-    return { ok: false, reason: "There are no entries in that file." };
+
+  // A journal is more than its days now. A file holding only a standing list —
+  // which is exactly what a second device has before anything is written on it
+  // — is still worth importing.
+  if (dates.length === 0 && incoming.tasks.length === 0) {
+    return { ok: false, reason: "There is nothing in that file to bring over." };
   }
 
   let added = 0;
@@ -109,6 +119,7 @@ export function readImport(text: string, current: Journal): ImportResult {
     if (current.days[date]) replaced += 1;
     else added += 1;
   }
+  const tasksAdded = incoming.tasks.filter((t) => !current.tasks.some((m) => m.id === t.id)).length;
 
   return {
     ok: true,
@@ -120,9 +131,11 @@ export function readImport(text: string, current: Journal): ImportResult {
       // desktop should not cost either device a habit the other had not heard
       // of yet.
       habits: mergeHabitLists(current.habits, incoming.habits),
+      tasks: mergeTaskLists(current.tasks, incoming.tasks),
       promptSkips: Math.max(current.promptSkips, incoming.promptSkips),
     },
     added,
     replaced,
+    tasksAdded,
   };
 }

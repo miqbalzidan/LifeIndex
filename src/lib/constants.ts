@@ -16,6 +16,11 @@ export const HABIT_MAX_LENGTH = 32;
 /** The row is meant to be glanceable; past a dozen it stops being a row. */
 export const HABIT_MAX_COUNT = 12;
 
+/** A task is a sentence, not a label, so it gets more room than a habit name. */
+export const TASK_MAX_LENGTH = 140;
+/** High enough never to be met in practice; there only so storage can't run away. */
+export const TASK_MAX_COUNT = 200;
+
 export const TRIGGERS = ["tired", "bored", "alone", "stressed", "scrolling", "other"] as const;
 
 /** Default hours of sleep on a day that has not been filled in yet. */
