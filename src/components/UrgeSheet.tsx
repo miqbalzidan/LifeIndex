@@ -1,11 +1,16 @@
 import { useState } from "react";
 import { Scale } from "./Scale.tsx";
 import { useOverlay } from "../hooks/useOverlay.ts";
-import { TRIGGERS } from "../lib/constants.ts";
-import { formatTime, minutesNow } from "../lib/date.ts";
+import { BACKFILL_TIME, TRIGGERS } from "../lib/constants.ts";
+import { formatEntryDate, fromTimeInput, minutesNow, toTimeInput } from "../lib/date.ts";
 import type { Outcome, Rating, Urge } from "../types.ts";
 
 interface UrgeSheetProps {
+  /** The day this urge belongs to. Not always today — a missed one can be
+   *  written up later, from that day in the archive. */
+  date: string;
+  /** Today, so the sheet can say which day it is writing to when it isn't. */
+  todayDate: string;
   /** The urge being changed, when this is an edit rather than a new log. */
   editing?: Urge;
   onClose: () => void;
@@ -14,7 +19,7 @@ interface UrgeSheetProps {
   onDelete?: () => void;
 }
 
-export function UrgeSheet({ editing, onClose, onSave, onDelete }: UrgeSheetProps) {
+export function UrgeSheet({ date, todayDate, editing, onClose, onSave, onDelete }: UrgeSheetProps) {
   const ref = useOverlay<HTMLDivElement>(onClose);
 
   const [level, setLevel] = useState<Rating>(editing?.level ?? 3);
@@ -23,10 +28,14 @@ export function UrgeSheet({ editing, onClose, onSave, onDelete }: UrgeSheetProps
   const [alt, setAlt] = useState(editing?.alt ?? "");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
-  // Stamped when the sheet opens, and saved as-is: the urge happened when you
-  // reached for this, not whenever you finished writing it up. An edit keeps
-  // the minute it was logged at rather than moving it to now.
-  const [at] = useState(() => editing?.t ?? minutesNow());
+  // Stamped when the sheet opens: the urge happened when you reached for this,
+  // not whenever you finished writing it up. An edit opens on the minute it was
+  // logged at rather than moving it to now. Either way it can be corrected —
+  // noticing an urge and writing it up are not always the same moment, and a
+  // remembered time is better than no record.
+  const [at, setAt] = useState(
+    () => editing?.t ?? (date === todayDate ? minutesNow() : BACKFILL_TIME)
+  );
 
   const save = (outcome: Outcome) => {
     onSave({
@@ -60,7 +69,21 @@ export function UrgeSheet({ editing, onClose, onSave, onDelete }: UrgeSheetProps
           <h2 className="sheet-title" id="sheet-title">
             {editing ? "Edit urge" : "Log an urge"}
           </h2>
-          <div className="sheet-time">{formatTime(at)}</div>
+          <div className="sheet-when">
+            {date !== todayDate && <div className="sheet-day">{formatEntryDate(date)}</div>}
+            <input
+              type="time"
+              className="sheet-time"
+              value={toTimeInput(at)}
+              onChange={(e) => {
+                const mins = fromTimeInput(e.target.value);
+                // An empty or half-typed field leaves the last good time alone
+                // rather than snapping the urge to midnight.
+                if (mins !== null) setAt(mins);
+              }}
+              aria-label="Time"
+            />
+          </div>
         </div>
 
         <div className="sheet-field">

@@ -9,6 +9,7 @@ interface ReaderOverlayProps {
   journal: JournalApi;
   onClose: () => void;
   onEditUrge: (urge: Urge) => void;
+  onLogUrge: () => void;
 }
 
 /**
@@ -18,7 +19,7 @@ interface ReaderOverlayProps {
  * the same size it has everywhere else — but it is the day itself, not a
  * printout of it, so a typo can be fixed and a mis-logged urge corrected.
  */
-export function ReaderOverlay({ day, journal, onClose, onEditUrge }: ReaderOverlayProps) {
+export function ReaderOverlay({ day, journal, onClose, onEditUrge, onLogUrge }: ReaderOverlayProps) {
   const ref = useOverlay<HTMLDivElement>(onClose);
 
   return (
@@ -51,6 +52,13 @@ export function ReaderOverlay({ day, journal, onClose, onEditUrge }: ReaderOverl
           onAdjustSleep={(delta) => journal.adjustSleep(day.date, delta)}
           onEditUrge={onEditUrge}
         />
+
+        {/* The floating button logs against today, and is hidden behind this
+            overlay anyway. An urge remembered late belongs to the day it
+            happened on, so it gets added from that day. */}
+        <button type="button" className="reader-log" onClick={onLogUrge}>
+          Log an urge on this day
+        </button>
       </div>
     </div>
   );

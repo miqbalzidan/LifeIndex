@@ -33,9 +33,10 @@ which deliberately doesn't.
   on 1–5, hours slept, and a quiet row of habits you can add to and prune. Urges
   logged today appear as a timeline under the entry.
 - **Urge log** — a bottom sheet, not a screen. Intensity, a trigger chip, two
-  free-text lines, and two closing buttons of identical weight. Tapping an urge
-  already logged reopens the same sheet to correct or delete it, keeping the
-  minute it was logged at.
+  free-text lines, and two closing buttons of identical weight. The time is a
+  field, not a label: an urge noticed at midnight and written up at noon belongs
+  to midnight. Tapping an urge already logged reopens the same sheet to correct
+  or delete it.
 - **Plan** — a standing list of things to do once. Not a daily checklist:
   nothing here resets at midnight, and ticking something off is permanent.
 - **Archive** — reverse-chronological, searchable, with an "on this day" card
@@ -123,6 +124,32 @@ tomorrow for anyone west of Greenwich.
 
 Relatedly, the app does not roll over to a new day while you have it open and
 are writing. It re-checks the date when you reopen or refocus it.
+
+### Writing a night up late
+
+Noticing something and recording it are not the same moment, and the app is
+used at the end of a day that has already happened. So nothing here insists on
+being written in the moment:
+
+- **The urge's time is editable**, when logging and when correcting. An empty or
+  half-typed field leaves the last good time alone rather than snapping the urge
+  to midnight.
+- **Any day can be opened**, including one with nothing on it, from "Another
+  day" at the foot of the Archive. It's a date field rather than a list of
+  blanks — a page of empty days would be a page that comments on missing ones,
+  which is the one thing the empty states are not allowed to do. Opening a day
+  and writing nothing in it leaves no trace.
+- **An urge can be added to a past day** from inside that day, since the
+  floating button logs against today and is behind the reader anyway.
+
+A backfilled urge opens at 10pm (`BACKFILL_TIME`) rather than at the current
+clock. "Now" is the right default only for something logged as it happens; on a
+night three days ago it means nothing, and a morning timestamp quietly landing
+in a night journal's hour histogram is worse than a round number that asks to be
+corrected. The sheet also names the day it is writing to whenever that isn't
+today.
+
+The future is not reachable: the date field is capped at today.
 
 ### A past day is the day itself
 

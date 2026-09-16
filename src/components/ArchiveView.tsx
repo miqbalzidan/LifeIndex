@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { JournalTransfer } from "./JournalTransfer.tsx";
-import { formatDate, formatEntryDate, monthsAgoIso } from "../lib/date.ts";
+import { formatDate, formatEntryDate, monthsAgoIso, todayIso } from "../lib/date.ts";
 import { entryMeta, plural, snippet } from "../lib/format.ts";
 import type { JournalApi } from "../hooks/useJournal.ts";
 import type { Day } from "../types.ts";
@@ -98,6 +98,29 @@ export function ArchiveView({ journal, query, onQueryChange, onOpen }: ArchiveVi
           </p>
         )}
       </div>
+
+      {/* The list above holds only days with something on them, which is the
+          right thing to read back — but it means a night you never wrote on has
+          no way in. This is that way in. It is a date field rather than a list
+          of blanks: a page of empty days is a page that comments on missing
+          ones. */}
+      <section className="reach">
+        <h2 className="label">Another day</h2>
+        <p className="reach-note">
+          Open any day to write it up late — the night itself, or an urge you
+          only remembered afterwards.
+        </p>
+        <input
+          type="date"
+          className="reach-input"
+          max={todayIso()}
+          value=""
+          onChange={(e) => {
+            if (e.target.value) onOpen(e.target.value);
+          }}
+          aria-label="Open another day"
+        />
+      </section>
 
       <JournalTransfer journal={journal.journal} onImport={journal.replaceJournal} />
     </div>

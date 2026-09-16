@@ -84,3 +84,24 @@ export function formatTime(mins: number): string {
   const hour = h % 12 === 0 ? 12 : h % 12;
   return `${hour}:${String(m).padStart(2, "0")}${suffix}`;
 }
+
+/**
+ * Minutes past midnight as `<input type="time">` wants them, and back.
+ *
+ * That control always speaks 24-hour `HH:MM` whatever it shows the user, so
+ * this is a fixed format rather than a localised one.
+ */
+export function toTimeInput(mins: number): string {
+  const total = ((mins % 1440) + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** Minutes past midnight, or `null` if the field is empty or not a time. */
+export function fromTimeInput(value: string): number | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}

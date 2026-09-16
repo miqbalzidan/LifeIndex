@@ -2,6 +2,13 @@ import { expect, test, type Page } from "@playwright/test";
 import { entry, seed } from "./support.ts";
 
 const reader = (page: Page) => page.getByRole("dialog", { name: "Entry" });
+
+/** "22:25" as the timeline writes it, so the two can be compared directly. */
+function as12Hour(value: string): string {
+  const [h, m] = value.split(":").map(Number);
+  const suffix = h! >= 12 ? "pm" : "am";
+  return `${h! % 12 === 0 ? 12 : h! % 12}:${String(m).padStart(2, "0")}${suffix}`;
+}
 const sheet = (page: Page) => page.getByRole("dialog", { name: /Log an urge|Edit urge/ });
 
 async function logUrge(page: Page, outcome: "Rode it out" | "Gave in", note: string) {
@@ -22,7 +29,8 @@ test.describe("changing an urge already logged", () => {
 
     await page.locator(".timeline-item").click();
     await expect(page.locator(".sheet-title")).toHaveText("Edit urge");
-    await expect(page.locator(".sheet-time")).toHaveText(loggedAt!);
+    // The field opens on the minute it was logged at, not on now.
+    expect(as12Hour(await page.getByLabel("Time").inputValue())).toBe(loggedAt);
     await expect(page.getByLabel("What was going on?")).toHaveValue("first thoughts");
     await expect(page.getByRole("button", { name: "bored", exact: true })).toHaveAttribute(
       "aria-pressed",
@@ -154,7 +162,7 @@ test.describe("a past day is the day itself, not a printout of it", () => {
   test("an urge on that day can be corrected without leaving the entry", async ({ page }) => {
     await reader(page).locator(".timeline-item").click();
     await expect(page.locator(".sheet-title")).toHaveText("Edit urge");
-    await expect(page.locator(".sheet-time")).toHaveText("10:25pm");
+    await expect(page.getByLabel("Time")).toHaveValue("22:25");
 
     await page.getByLabel("What was going on?").fill("corrected months later");
     await page.getByRole("button", { name: "Rode it out", exact: true }).click();
