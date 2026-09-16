@@ -911,6 +911,40 @@ input::placeholder {
   margin-top: 26px;
 }
 
+/* --- archive: reaching a day that has nothing on it ----------------------- */
+
+.reach {
+  margin-top: 46px;
+  padding-top: 22px;
+  border-top: 1px solid var(--ink-09);
+}
+
+.reach-note {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-42);
+  margin-top: 10px;
+  max-width: 330px;
+}
+
+.reach-input {
+  display: block;
+  margin-top: 14px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--ink-14);
+  outline: none;
+  padding: 7px 0;
+  color: var(--ink-80);
+  font-family: var(--mono);
+  font-size: 13px;
+  color-scheme: dark;
+}
+
+.reach-input:focus {
+  border-bottom-color: var(--accent-50);
+}
+
 /* --- archive: getting a copy out, and back in ----------------------------- */
 
 .transfer {
@@ -1163,6 +1197,27 @@ input::placeholder {
 }
 
 
+.reader-log {
+  display: block;
+  width: 100%;
+  margin-top: 36px;
+  padding: 13px;
+  cursor: pointer;
+  background: none;
+  border: 1px solid var(--ink-14);
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-58);
+}
+
+.reader-log:hover {
+  border-color: var(--ink-32);
+  color: var(--ink);
+}
+
 /* --- urge sheet ----------------------------------------------------------- */
 
 .sheet-layer {
@@ -1217,10 +1272,46 @@ input::placeholder {
   margin: 0;
 }
 
+.sheet-when {
+  text-align: right;
+}
+
+.sheet-day {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-40);
+  margin-bottom: 3px;
+}
+
+/* An input rather than a label: the moment an urge happened and the moment you
+   wrote it up are not always the same one. Styled to read as the text it
+   replaced, so the sheet head still looks like a sheet head. */
 .sheet-time {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--ink-12);
+  outline: none;
+  padding: 2px 0;
+  cursor: pointer;
   font-family: var(--mono);
   font-size: 11.5px;
-  color: var(--ink-40);
+  color: var(--ink-70);
+  /* So the native picker comes up dark rather than a white card over the app. */
+  color-scheme: dark;
+}
+
+.sheet-time:focus {
+  border-bottom-color: var(--accent-50);
+}
+
+/* The browser's own picker button is the one icon that would exist in this
+   app. Tapping the field still opens the picker on a phone, which is what this
+   is designed for; on a desktop the segments take typing and arrow keys. */
+.sheet-time::-webkit-calendar-picker-indicator,
+.reach-input::-webkit-calendar-picker-indicator {
+  display: none;
 }
 
 .sheet-field {

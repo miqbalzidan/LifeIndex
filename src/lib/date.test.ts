@@ -4,11 +4,13 @@ import {
   formatEntryDate,
   formatTime,
   fromIso,
+  fromTimeInput,
   minutesNow,
   monthsAgoIso,
   recentDates,
   todayIso,
   toIso,
+  toTimeInput,
 } from "./date.ts";
 
 /** Runs `fn` with the process in `tz`, then puts the old zone back. */
@@ -197,4 +199,38 @@ describe("formatDate", () => {
       expect(formatDate("2026-09-09", { weekday: "long" })).toBe("Wednesday");
     });
   });
+});
+
+describe("toTimeInput and fromTimeInput", () => {
+  it("speaks the 24-hour format the time input wants", () => {
+    expect(toTimeInput(0)).toBe("00:00");
+    expect(toTimeInput(9 * 60 + 5)).toBe("09:05");
+    expect(toTimeInput(22 * 60 + 14)).toBe("22:14");
+    expect(toTimeInput(1439)).toBe("23:59");
+  });
+
+  it("wraps rather than producing a 25th hour", () => {
+    expect(toTimeInput(1440)).toBe("00:00");
+    expect(toTimeInput(-60)).toBe("23:00");
+  });
+
+  it("reads a time back to minutes past midnight", () => {
+    expect(fromTimeInput("00:00")).toBe(0);
+    expect(fromTimeInput("22:14")).toBe(22 * 60 + 14);
+    expect(fromTimeInput("9:05")).toBe(9 * 60 + 5);
+    expect(fromTimeInput(" 23:59 ")).toBe(1439);
+  });
+
+  it("round-trips every minute of the day", () => {
+    for (let mins = 0; mins < 1440; mins++) {
+      expect(fromTimeInput(toTimeInput(mins))).toBe(mins);
+    }
+  });
+
+  it.each(["", "   ", "nope", "24:00", "12:60", "12", "12:5", "-1:00"])(
+    "reads %o as no time at all",
+    (value) => {
+      expect(fromTimeInput(value)).toBeNull();
+    }
+  );
 });

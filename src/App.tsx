@@ -7,10 +7,14 @@ import { TabBar } from "./components/TabBar.tsx";
 import { TodayView } from "./components/TodayView.tsx";
 import { UrgeSheet } from "./components/UrgeSheet.tsx";
 import { useJournal } from "./hooks/useJournal.ts";
+import { blankDay } from "./lib/storage.ts";
 import type { Tab, Urge } from "./types.ts";
 
-/** Logging a new urge, or changing one already on a day. */
-type Sheet = { kind: "new" } | { kind: "edit"; date: string; urge: Urge };
+/**
+ * Logging a new urge, or changing one already on a day. Both carry the day they
+ * belong to: a missed urge can be written up later against the day it happened.
+ */
+type Sheet = { kind: "new"; date: string } | { kind: "edit"; date: string; urge: Urge };
 
 export default function App() {
   const journal = useJournal();
@@ -20,7 +24,9 @@ export default function App() {
   const [readerDate, setReaderDate] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
 
-  const reader = readerDate ? journal.days[readerDate] : undefined;
+  // Falls back to a blank day so a date you never wrote on can still be opened
+  // and written up. Nothing is stored until something is actually put in it.
+  const reader = readerDate ? (journal.days[readerDate] ?? blankDay(readerDate)) : undefined;
 
   // The sheet covers the button that opened it, so the button is unmounted
   // while it is up and there is nothing left for the sheet to hand focus back
@@ -49,16 +55,17 @@ export default function App() {
     (draft: Omit<Urge, "id">) => {
       if (!sheet) return;
       if (sheet.kind === "new") {
-        journal.logUrge(journal.todayDate, draft);
+        journal.logUrge(sheet.date, draft);
         // Land back on the day it belongs to, where it has just appeared in the
-        // timeline under the entry.
-        setTab("today");
+        // timeline under the entry — unless that day is already open in front of
+        // you, in which case you are looking at it.
+        if (!reader) setTab("today");
       } else {
         journal.updateUrge(sheet.date, sheet.urge.id, draft);
       }
       setSheet(null);
     },
-    [journal, sheet]
+    [journal, sheet, reader]
   );
 
   const deleteUrge = useCallback(() => {
@@ -91,12 +98,22 @@ export default function App() {
           journal={journal}
           onClose={closeReader}
           onEditUrge={editUrgeOn(reader.date)}
+          onLogUrge={() => setSheet({ kind: "new", date: reader.date })}
         />
       )}
 
-      {sheet?.kind === "new" && <UrgeSheet onClose={closeSheet} onSave={saveUrge} />}
+      {sheet?.kind === "new" && (
+        <UrgeSheet
+          date={sheet.date}
+          todayDate={journal.todayDate}
+          onClose={closeSheet}
+          onSave={saveUrge}
+        />
+      )}
       {sheet?.kind === "edit" && (
         <UrgeSheet
+          date={sheet.date}
+          todayDate={journal.todayDate}
           editing={sheet.urge}
           onClose={closeSheet}
           onSave={saveUrge}
@@ -111,7 +128,7 @@ export default function App() {
           ref={fabRef}
           type="button"
           className="fab"
-          onClick={() => setSheet({ kind: "new" })}
+          onClick={() => setSheet({ kind: "new", date: journal.todayDate })}
         >
           Log urge
         </button>

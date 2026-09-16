@@ -16,6 +16,16 @@ export const HABIT_MAX_LENGTH = 32;
 /** The row is meant to be glanceable; past a dozen it stops being a row. */
 export const HABIT_MAX_COUNT = 12;
 
+/**
+ * The time a backfilled urge opens on, when the day is not today.
+ *
+ * "Now" is the right default only for an urge logged as it happens. On a night
+ * three days ago the current clock means nothing, and a morning timestamp
+ * quietly landing in a night journal's hour histogram is worse than an obvious
+ * round number that asks to be corrected.
+ */
+export const BACKFILL_TIME = 22 * 60;
+
 /** A task is a sentence, not a label, so it gets more room than a habit name. */
 export const TASK_MAX_LENGTH = 140;
 /** High enough never to be met in practice; there only so storage can't run away. */
