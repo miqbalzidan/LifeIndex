@@ -5,7 +5,7 @@ const openPlan = (page: Page) => page.getByRole("tab", { name: "Plan" }).click()
 
 async function add(page: Page, text: string) {
   await page.getByLabel("Something to do once").fill(text);
-  await page.getByRole("button", { name: "Add" }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
 }
 
 test.beforeEach(async ({ page }) => {
@@ -28,7 +28,7 @@ test("a task survives a reload, and is not a per-day thing", async ({ page }) =>
   await expect(tasks(page)).toHaveText(["Move the phone charger to the hallway"]);
 
   // Nothing about it belongs to today: the day it was added stays empty.
-  await page.getByRole("tab", { name: "Archive" }).click();
+  await page.getByRole("tab", { name: "Calendar" }).click();
   await expect(page.locator("button.entry")).toHaveCount(0);
 });
 
@@ -111,7 +111,7 @@ test("the standing list travels in an export and merges back", async ({ page, br
   await add(page, "Book a check-up");
   await page.locator(".task-check").first().click(); // tick the first one off here
 
-  await page.getByRole("tab", { name: "Archive" }).click();
+  await page.getByRole("tab", { name: "Calendar" }).click();
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "Export a copy" }).click(),
@@ -133,9 +133,9 @@ test("the standing list travels in an export and merges back", async ({ page, br
   await second.goto("/");
   await openPlan(second);
   await second.getByLabel("Something to do once").fill("Only on this device");
-  await second.getByRole("button", { name: "Add" }).click();
+  await second.getByRole("button", { name: "Add", exact: true }).click();
 
-  await second.getByRole("tab", { name: "Archive" }).click();
+  await second.getByRole("tab", { name: "Calendar" }).click();
   await second.getByRole("button", { name: "Import a copy" }).click();
   await second.locator('input[type="file"]').setInputFiles({
     name: "nightly-backup.json",

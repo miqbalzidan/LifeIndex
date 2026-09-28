@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { gotoToday, openUrgeSheet } from "./support.ts";
 
 /**
  * The point of installing this app is that it opens at night, in bed, on bad
@@ -6,7 +7,7 @@ import { expect, test } from "@playwright/test";
  * memory, everything served by the service worker out of its precache.
  */
 test("opens from cold with no network, with the journal intact", async ({ page, context }) => {
-  await page.goto("/");
+  await gotoToday(page);
   await page.locator("textarea.editor").fill("Written while online.");
   await expect(page.locator(".word-count")).toHaveText("3 words");
 
@@ -24,25 +25,27 @@ test("opens from cold with no network, with the journal intact", async ({ page, 
   const response = await cold.goto("/");
   expect(response?.status()).toBe(200);
 
-  await expect(cold.locator("h1.today-date")).toBeVisible();
-  await expect(cold.locator("textarea.editor")).toHaveValue("Written while online.");
-
   // Not just the shell: the fonts and styles are precached too, so it does not
   // come up unstyled.
   await expect(cold.locator(".fab")).toHaveCSS("position", "fixed");
+
+  await cold.getByRole("tab", { name: "Today" }).click();
+  await expect(cold.locator("h1.today-date")).toBeVisible();
+  await expect(cold.locator("textarea.editor")).toHaveValue("Written while online.");
 });
 
 test("still records an entry while offline", async ({ page, context }) => {
-  await page.goto("/");
+  await gotoToday(page);
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => undefined));
   await context.setOffline(true);
 
   await page.locator("textarea.editor").fill("Written on a plane.");
-  await page.getByRole("button", { name: "Log urge" }).click();
+  await openUrgeSheet(page);
   await page.getByRole("button", { name: "Rode it out", exact: true }).click();
   await expect(page.locator(".timeline-item")).toHaveCount(1);
 
   await page.reload();
+  await page.getByRole("tab", { name: "Today" }).click();
   await expect(page.locator("textarea.editor")).toHaveValue("Written on a plane.");
   await expect(page.locator(".timeline-item")).toHaveCount(1);
 });

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArchiveView } from "./components/ArchiveView.tsx";
+import { CalendarView } from "./components/CalendarView.tsx";
 import { InsightsView } from "./components/InsightsView.tsx";
 import { PlanView } from "./components/PlanView.tsx";
 import { ReaderOverlay } from "./components/ReaderOverlay.tsx";
@@ -19,10 +19,14 @@ type Sheet = { kind: "new"; date: string } | { kind: "edit"; date: string; urge:
 export default function App() {
   const journal = useJournal();
 
-  const [tab, setTab] = useState<Tab>("today");
+  // The calendar leads: it is the fastest way to either day anyone opens the
+  // app for, tonight's or an old one, without first landing somewhere and
+  // then navigating away from it.
+  const [tab, setTab] = useState<Tab>("calendar");
   const [query, setQuery] = useState("");
   const [readerDate, setReaderDate] = useState<string | null>(null);
   const [sheet, setSheet] = useState<Sheet | null>(null);
+  const [fabOpen, setFabOpen] = useState(false);
 
   // Falls back to a blank day so a date you never wrote on can still be opened
   // and written up. Nothing is stored until something is actually put in it.
@@ -44,7 +48,19 @@ export default function App() {
   const changeTab = useCallback((next: Tab) => {
     setTab(next);
     setReaderDate(null);
+    setFabOpen(false);
   }, []);
+
+  // Today has its own tab, with the rotating prompt the reader doesn't carry,
+  // so opening today's date is a different act from opening any other day —
+  // it goes there rather than into an overlay on top of it.
+  const openDay = useCallback(
+    (date: string) => {
+      if (date === journal.todayDate) setTab("today");
+      else setReaderDate(date);
+    },
+    [journal.todayDate]
+  );
 
   const editUrgeOn = useCallback(
     (date: string) => (urge: Urge) => setSheet({ kind: "edit", date, urge }),
@@ -81,13 +97,8 @@ export default function App() {
           <TodayView journal={journal} onEditUrge={editUrgeOn(journal.todayDate)} />
         )}
         {tab === "plan" && <PlanView journal={journal} />}
-        {tab === "archive" && (
-          <ArchiveView
-            journal={journal}
-            query={query}
-            onQueryChange={setQuery}
-            onOpen={setReaderDate}
-          />
+        {tab === "calendar" && (
+          <CalendarView journal={journal} query={query} onQueryChange={setQuery} onOpen={openDay} />
         )}
         {tab === "insights" && <InsightsView days={journal.days} />}
       </div>
@@ -122,16 +133,51 @@ export default function App() {
       )}
 
       {/* Always within reach, on every screen — except while something is
-          already covering the app. */}
+          already covering the app. Both options are dated today: a past day
+          has its own way in, from inside that day in the reader. */}
       {!sheet && !reader && (
-        <button
-          ref={fabRef}
-          type="button"
-          className="fab"
-          onClick={() => setSheet({ kind: "new", date: journal.todayDate })}
-        >
-          Log urge
-        </button>
+        <>
+          {fabOpen && (
+            <div className="fab-scrim" aria-hidden="true" onClick={() => setFabOpen(false)} />
+          )}
+
+          {fabOpen && (
+            <div className="fab-menu">
+              <button
+                type="button"
+                className="fab-option"
+                onClick={() => {
+                  setFabOpen(false);
+                  setTab("today");
+                }}
+              >
+                Entry
+              </button>
+              <button
+                type="button"
+                className="fab-option"
+                onClick={() => {
+                  setFabOpen(false);
+                  setSheet({ kind: "new", date: journal.todayDate });
+                }}
+              >
+                Urge
+              </button>
+            </div>
+          )}
+
+          <button
+            ref={fabRef}
+            type="button"
+            className="fab"
+            aria-haspopup="true"
+            aria-expanded={fabOpen}
+            onClick={() => setFabOpen((open) => !open)}
+          >
+            {fabOpen ? "×" : "+"}
+            <span className="sr-only"> {fabOpen ? "Close" : "Add an entry or an urge"}</span>
+          </button>
+        </>
       )}
 
       <TabBar current={tab} onChange={changeTab} />

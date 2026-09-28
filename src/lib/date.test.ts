@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   formatDate,
   formatEntryDate,
+  formatMonthLabel,
   formatTime,
   fromIso,
   fromTimeInput,
   minutesNow,
+  monthGrid,
   monthsAgoIso,
   recentDates,
   todayIso,
@@ -233,4 +235,69 @@ describe("toTimeInput and fromTimeInput", () => {
       expect(fromTimeInput(value)).toBeNull();
     }
   );
+});
+
+describe("monthGrid", () => {
+  it("is always a whole number of weeks", () => {
+    for (const [y, m] of [[2026, 0], [2026, 1], [2026, 8], [2024, 1]] as const) {
+      expect(monthGrid(y, m).length % 7).toBe(0);
+    }
+  });
+
+  it("starts the month on the day it actually falls on, Sunday first", () => {
+    // September 1st, 2026 is a Tuesday: two blank cells lead it.
+    const sept = monthGrid(2026, 8);
+    expect(sept.slice(0, 2)).toEqual([null, null]);
+    expect(sept[2]).toBe("2026-09-01");
+  });
+
+  it("needs no leading blanks when the month starts on a Sunday", () => {
+    // February 1st, 2026 is a Sunday.
+    expect(monthGrid(2026, 1)[0]).toBe("2026-02-01");
+  });
+
+  it("lists every day of the month, in order, with nothing skipped or doubled", () => {
+    const cells = monthGrid(2026, 8).filter((c): c is string => c !== null);
+    expect(cells).toHaveLength(30);
+    expect(cells[0]).toBe("2026-09-01");
+    expect(cells[29]).toBe("2026-09-30");
+    for (let i = 1; i < cells.length; i++) {
+      const gap = fromIso(cells[i]!).getTime() - fromIso(cells[i - 1]!).getTime();
+      expect(Math.round(gap / 86_400_000)).toBe(1);
+    }
+  });
+
+  it("gets a leap-year February right", () => {
+    const cells = monthGrid(2024, 1).filter((c): c is string => c !== null);
+    expect(cells).toHaveLength(29);
+    expect(cells[28]).toBe("2024-02-29");
+  });
+
+  it("needs no trailing padding when the month happens to fill whole weeks", () => {
+    // January 2026 runs Thursday through Saturday: 4 leading blanks + 31 days
+    // is exactly 35, five clean weeks.
+    const jan = monthGrid(2026, 0);
+    expect(jan).toHaveLength(35);
+    expect(jan.filter((c) => c === null)).toHaveLength(4);
+  });
+
+  it("pads the trailing week with blanks rather than leaving it short", () => {
+    // 2 leading + 30 days = 32, padded out to 35.
+    const sept = monthGrid(2026, 8);
+    expect(sept).toHaveLength(35);
+    expect(sept.slice(32)).toEqual([null, null, null]);
+  });
+});
+
+describe("formatMonthLabel", () => {
+  it("names the month and year", () => {
+    expect(formatMonthLabel(2026, 8)).toBe("September 2026");
+    expect(formatMonthLabel(2026, 0)).toBe("January 2026");
+  });
+
+  it("reads from local components, not a UTC-shifted instant", () => {
+    inZone("America/Los_Angeles", () => {
+      expect(formatMonthLabel(2026, 8)).toBe("September 2026");
+    });
+  });
 });

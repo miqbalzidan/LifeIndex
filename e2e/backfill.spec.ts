@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { seed } from "./support.ts";
+import { openUrgeSheet, seed } from "./support.ts";
 
 const reader = (page: Page) => page.getByRole("dialog", { name: "Entry" });
 
@@ -16,19 +16,20 @@ const daysAgo = (page: Page, back: number) =>
 test.describe("an urge written up after the fact", () => {
   test("the time can be set when logging one today", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Log urge" }).click();
+    await openUrgeSheet(page);
 
     await page.getByLabel("Time").fill("23:40");
     await page.getByRole("button", { name: "Rode it out", exact: true }).click();
 
     await expect(page.locator(".timeline-time")).toHaveText("11:40pm");
     await page.reload();
+    await page.getByRole("tab", { name: "Today" }).click();
     await expect(page.locator(".timeline-time")).toHaveText("11:40pm");
   });
 
   test("the time of one already logged can be corrected", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Log urge" }).click();
+    await openUrgeSheet(page);
     await page.getByRole("button", { name: "Gave in", exact: true }).click();
 
     await page.locator(".timeline-item").click();
@@ -40,7 +41,7 @@ test.describe("an urge written up after the fact", () => {
 
   test("a half-typed time does not snap the urge to midnight", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Log urge" }).click();
+    await openUrgeSheet(page);
     await page.getByLabel("Time").fill("23:40");
     await page.getByLabel("Time").fill("");
     await page.getByRole("button", { name: "Rode it out", exact: true }).click();
@@ -50,22 +51,24 @@ test.describe("an urge written up after the fact", () => {
 });
 
 test.describe("a day you never wrote on", () => {
-  test("can be opened from the archive and written up", async ({ page }) => {
+  test("can be opened from the calendar and written up", async ({ page }) => {
     await page.goto("/");
     const missed = await daysAgo(page, 4);
 
-    await page.getByRole("tab", { name: "Archive" }).click();
+    await page.getByRole("tab", { name: "Calendar" }).click();
     await expect(page.locator("button.entry")).toHaveCount(0);
 
-    await page.getByLabel("Open another day").fill(missed);
+    await page.getByLabel("Jump to a day").fill(missed);
     await expect(reader(page)).toBeVisible();
 
     await reader(page).locator("textarea.editor").fill("Writing this up four days late.");
-    await page.getByRole("button", { name: "← Archive" }).click();
+    await page.getByRole("button", { name: "← Calendar" }).click();
 
+    await page.getByLabel("Search entries").fill("four days late");
     await expect(page.locator("button.entry")).toContainText("Writing this up four days late.");
     await page.reload();
-    await page.getByRole("tab", { name: "Archive" }).click();
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    await page.getByLabel("Search entries").fill("four days late");
     await expect(page.locator("button.entry")).toContainText("Writing this up four days late.");
   });
 
@@ -73,12 +76,12 @@ test.describe("a day you never wrote on", () => {
     await page.goto("/");
     const missed = await daysAgo(page, 4);
 
-    await page.getByRole("tab", { name: "Archive" }).click();
-    await page.getByLabel("Open another day").fill(missed);
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    await page.getByLabel("Jump to a day").fill(missed);
     await expect(reader(page)).toBeVisible();
-    await page.getByRole("button", { name: "← Archive" }).click();
+    await page.getByRole("button", { name: "← Calendar" }).click();
 
-    await expect(page.locator("button.entry")).toHaveCount(0);
+    await expect(page.locator(".calendar-dot")).toHaveCount(0);
     // Often nothing is written at all, so the key can be absent entirely.
     const stored = await page.evaluate(() => localStorage.getItem("nightly.journal.v1"));
     expect(stored ?? "").not.toContain(missed);
@@ -86,10 +89,10 @@ test.describe("a day you never wrote on", () => {
 
   test("cannot be in the future", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("tab", { name: "Archive" }).click();
+    await page.getByRole("tab", { name: "Calendar" }).click();
 
     const today = await daysAgo(page, 0);
-    await expect(page.getByLabel("Open another day")).toHaveAttribute("max", today);
+    await expect(page.getByLabel("Jump to a day")).toHaveAttribute("max", today);
   });
 });
 
@@ -98,8 +101,8 @@ test.describe("an urge on a past day", () => {
     await page.goto("/");
     const missed = await daysAgo(page, 3);
 
-    await page.getByRole("tab", { name: "Archive" }).click();
-    await page.getByLabel("Open another day").fill(missed);
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    await page.getByLabel("Jump to a day").fill(missed);
 
     await page.getByRole("button", { name: "Log an urge on this day" }).click();
 
@@ -118,7 +121,7 @@ test.describe("an urge on a past day", () => {
     await expect(reader(page).locator(".timeline-time")).toHaveText("11:15pm");
 
     // Today is untouched.
-    await page.getByRole("button", { name: "← Archive" }).click();
+    await page.getByRole("button", { name: "← Calendar" }).click();
     await page.getByRole("tab", { name: "Today" }).click();
     await expect(page.locator(".timeline-item")).toHaveCount(0);
   });
@@ -127,11 +130,11 @@ test.describe("an urge on a past day", () => {
     await seed(page, {});
     const missed = await daysAgo(page, 3);
 
-    await page.getByRole("tab", { name: "Archive" }).click();
-    await page.getByLabel("Open another day").fill(missed);
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    await page.getByLabel("Jump to a day").fill(missed);
     await page.getByRole("button", { name: "Log an urge on this day" }).click();
     await page.getByRole("button", { name: "Gave in", exact: true }).click();
-    await page.getByRole("button", { name: "← Archive" }).click();
+    await page.getByRole("button", { name: "← Calendar" }).click();
 
     // The window now runs back to that day: four days, one of them given in to.
     await page.getByRole("tab", { name: "Insights" }).click();
@@ -142,7 +145,7 @@ test.describe("an urge on a past day", () => {
 
 test("the sheet does not name a day when the day is today", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Log urge" }).click();
+  await openUrgeSheet(page);
   await expect(page.locator(".sheet-day")).toHaveCount(0);
   await expect(page.getByLabel("Time")).toBeVisible();
 });

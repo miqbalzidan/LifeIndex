@@ -28,6 +28,13 @@ Five surfaces, and the journal is the middle of all of them — everything else
 attaches to the day rather than the other way round. The exception is the plan,
 which deliberately doesn't.
 
+- **Calendar** — the landing screen. A month grid, today highlighted, a dot on
+  any day with something on it, and an "on this day" card surfacing one month
+  and one year back. Typing in the search box replaces the grid with a
+  reverse-chronological result list; clearing it returns to the grid. At the
+  top, a plain date field to jump straight to a day without knowing whether
+  anything is on it, or scrolling to find out. Opening a day opens the day
+  itself: the writing, its urges and its measures are all still editable.
 - **Today** — the date, a rotating writing prompt that steps aside as soon as
   there's writing on the page, an editor that grows as you type, mood and energy
   on 1–5, hours slept, and a quiet row of habits you can add to and prune. Urges
@@ -39,12 +46,13 @@ which deliberately doesn't.
   or delete it.
 - **Plan** — a standing list of things to do once. Not a daily checklist:
   nothing here resets at midnight, and ticking something off is permanent.
-- **Archive** — reverse-chronological, searchable, with an "on this day" card
-  surfacing one month and one year back, and, at the foot of the page, the way
-  to get a copy of the journal out and back in. Opening an entry opens the day
-  itself: the writing, its urges and its measures are all still editable.
 - **Insights** — clean days as a share of the last 30, urges by hour, mood over
   time, and urges per night grouped by hours slept.
+
+A floating "+" in the bottom right, on every screen, opens a two-option picker:
+**Entry** goes to Today, **Urge** opens the urge sheet against today. Both
+options are dated today — a past day gets its own writing and its own urges
+from inside that day, opened from the Calendar.
 
 ### Things that are deliberate
 
@@ -86,8 +94,9 @@ undo by accident:
 
 ```
 src/
-  App.tsx              screen switching, overlays, the floating log button
+  App.tsx              screen switching, overlays, the floating "+" picker
   components/          one file per surface, plus the shared 1–5 scale
+  components/CalendarView.tsx  the month grid, search, and "on this day"
   components/DayEditor.tsx  one day, open for writing — used by Today and the reader
   components/HabitRow.tsx   the habit chips, and the panel that edits the list
   components/PlanView.tsx   the standing list of one-off tasks
@@ -134,8 +143,8 @@ being written in the moment:
 - **The urge's time is editable**, when logging and when correcting. An empty or
   half-typed field leaves the last good time alone rather than snapping the urge
   to midnight.
-- **Any day can be opened**, including one with nothing on it, from "Another
-  day" at the foot of the Archive. It's a date field rather than a list of
+- **Any day can be opened**, including one with nothing on it, from "Jump to a
+  day" near the top of the Calendar. It's a date field rather than a list of
   blanks — a page of empty days would be a page that comments on missing ones,
   which is the one thing the empty states are not allowed to do. Opening a day
   and writing nothing in it leaves no trace.
@@ -167,6 +176,32 @@ delete confirmation is not where this app starts using red.
 The urge sheet can open on top of the reader, so `useOverlay` keeps a stack and
 only the topmost overlay answers Escape and traps Tab. Without that, one press
 would close the sheet and the entry behind it together.
+
+### The calendar, not a list
+
+The archive used to be a flat, reverse-chronological list of entries, with
+"another day" as a date field at the very foot of the page — past everything
+else, including export/import. Finding an old night meant scrolling to the
+bottom of a list that grows every day you write, which is the opposite of
+"a day you never touched is one tap away." A calendar fixes that by
+construction: every day in the visible month is reachable without knowing
+whether anything is on it, and it's the same number of taps in month six as
+it is in month one.
+
+It's also the app's landing screen. Today keeps its own tab — the rotating
+prompt and the "steps aside once you're writing" behaviour only live in
+`TodayView`, so opening today from the calendar routes there rather than into
+the reader overlay every other day uses.
+
+Search stays, because a calendar can't do what search does: find a word
+without already knowing the date. Typing a query swaps the grid for a result
+list; clearing it swaps back. One trade-off from that swap is worth stating
+plainly rather than leaving it to be discovered: a day with urges logged but
+no writing has no text for search to match, so it can no longer be found by
+scanning a list — it's still fully there, reachable by its calendar dot or by
+typing its date into "Jump to a day," just not by searching for it. That's the
+cost of organising by date instead of by content, and it's accepted here
+deliberately rather than silently.
 
 ### Habits are yours to choose
 
@@ -203,7 +238,7 @@ invariant suite both check for it.
 ### Getting a copy out
 
 There is no server, so a cleared browser or a lost phone is the end of the
-journal. The foot of the Archive writes the whole thing out as indented JSON —
+journal. The foot of the Calendar writes the whole thing out as indented JSON —
 `nightly-2026-09-09.json` — carrying a `format` tag and a `version` so a file
 can be recognised, and refused, rather than half-understood by a build that
 predates it.

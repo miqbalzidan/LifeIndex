@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
-import { entry, seed } from "./support.ts";
+import { entry, gotoToday, seed } from "./support.ts";
 
 const KEY = "nightly.journal.v1";
 
-const openArchive = async (page: Page) => page.getByRole("tab", { name: "Archive" }).click();
+const openArchive = async (page: Page) => page.getByRole("tab", { name: "Calendar" }).click();
 
 /** Hands the hidden file input a JSON file, as the file picker would. */
 async function chooseFile(page: Page, name: string, contents: string) {
@@ -48,7 +48,7 @@ test("exports the journal as a dated JSON file", async ({ page }) => {
  * the journal is gone, because there is no server that kept a copy.
  */
 test("a copy survives the site data being cleared", async ({ page, browser }) => {
-  await page.goto("/");
+  await gotoToday(page);
   await page.locator("textarea.editor").fill("The night I do not want to lose.");
   await expect
     .poll(() => page.evaluate((k) => localStorage.getItem(k), KEY))
@@ -82,11 +82,13 @@ test("a copy survives the site data being cleared", async ({ page, browser }) =>
   await fresh.getByRole("button", { name: "Import", exact: true }).click();
 
   await expect(fresh.locator(".transfer-message")).toHaveText("Imported 1 day.");
+  await fresh.getByLabel("Search entries").fill("do not want to lose");
   await expect(fresh.locator("button.entry")).toContainText("The night I do not want to lose.");
 
   // And it is on the device again, not just on screen.
   await fresh.reload();
   await openArchive(fresh);
+  await fresh.getByLabel("Search entries").fill("do not want to lose");
   await expect(fresh.locator("button.entry")).toContainText("The night I do not want to lose.");
 
   await cleared.close();
@@ -115,12 +117,16 @@ test("says what an import will overwrite, and does nothing until confirmed", asy
 
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(confirm).toHaveCount(0);
+  await page.getByLabel("Search entries").fill("What this device has");
   await expect(page.locator("button.entry")).toHaveCount(1);
   await expect(page.locator("button.entry")).toContainText("What this device has.");
+  await page.getByLabel("Search entries").fill("");
 
   await chooseFile(page, "copy.json", incoming);
   await page.getByRole("button", { name: "Import", exact: true }).click();
 
+  // "file has." is common to both surviving days' text.
+  await page.getByLabel("Search entries").fill("file has.");
   const entries = page.locator("button.entry");
   await expect(entries).toHaveCount(2);
   await expect(entries.first()).toContainText("A day only the file has.");
@@ -144,8 +150,11 @@ test("keeps days the file does not have", async ({ page }) => {
   );
   await page.getByRole("button", { name: "Import", exact: true }).click();
 
-  await expect(page.locator("button.entry")).toHaveCount(2);
-  await expect(page.locator("button.entry").last()).toContainText("Only on this device.");
+  await page.getByLabel("Search entries").fill("Only on this device");
+  await expect(page.locator("button.entry")).toContainText("Only on this device.");
+
+  await page.getByLabel("Search entries").fill("From the file");
+  await expect(page.locator("button.entry")).toContainText("From the file.");
 });
 
 test.describe("a file it cannot use", () => {
@@ -173,6 +182,7 @@ test.describe("a file it cannot use", () => {
 
       await expect(page.locator(".transfer-message")).toHaveText(expected);
       await expect(page.locator(".transfer-confirm")).toHaveCount(0);
+      await page.getByLabel("Search entries").fill("Still here afterwards");
       await expect(page.locator("button.entry")).toContainText("Still here afterwards.");
     });
   }

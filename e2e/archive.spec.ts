@@ -1,14 +1,17 @@
 import { expect, test } from "@playwright/test";
 import { entry, seed } from "./support.ts";
 
-test("entries list newest first and open in the reader", async ({ page }) => {
+test("search results list newest first and open in the reader", async ({ page }) => {
   await seed(page, {
     "2026-01-04": entry("2026-01-04", { text: "The oldest of the three entries." }),
     "2026-02-11": entry("2026-02-11", { text: "A middle entry about a cold walk." }),
     "2026-03-20": entry("2026-03-20", { text: "The newest entry, about rain." }),
   });
 
-  await page.getByRole("tab", { name: "Archive" }).click();
+  await page.getByRole("tab", { name: "Calendar" }).click();
+  // "entr" catches "entry" and "entries" in all three — a query broad enough to
+  // list all of them without depending on which month the calendar opens on.
+  await page.getByLabel("Search entries").fill("entr");
   const entries = page.locator("button.entry");
   await expect(entries).toHaveCount(3);
   await expect(entries.first()).toContainText("The newest entry");
@@ -22,12 +25,14 @@ test("entries list newest first and open in the reader", async ({ page }) => {
   await expect(reader).toHaveCount(0);
 });
 
-test("search narrows to matches, reports a miss, and clears", async ({ page }) => {
+test("search narrows to matches, reports a miss, and clears back to the calendar", async ({
+  page,
+}) => {
   await seed(page, {
     "2026-02-11": entry("2026-02-11", { text: "A middle entry about a cold walk." }),
     "2026-03-20": entry("2026-03-20", { text: "The newest entry, about rain." }),
   });
-  await page.getByRole("tab", { name: "Archive" }).click();
+  await page.getByRole("tab", { name: "Calendar" }).click();
 
   const search = page.getByLabel("Search entries");
   await search.fill("cold walk");
@@ -41,8 +46,11 @@ test("search narrows to matches, reports a miss, and clears", async ({ page }) =
   await expect(page.locator("button.entry")).toHaveCount(0);
   await expect(page.locator(".entries-empty")).toHaveText("Nothing here for that word. Try another.");
 
+  // Clearing the query is not "show everything" any more — it is leaving
+  // search mode, back to the calendar the page rests on.
   await search.fill("");
-  await expect(page.locator("button.entry")).toHaveCount(2);
+  await expect(page.locator("button.entry")).toHaveCount(0);
+  await expect(page.locator(".calendar-grid")).toBeVisible();
 });
 
 test("'on this day' surfaces a month and a year back, and hides while searching", async ({
@@ -65,7 +73,7 @@ test("'on this day' surfaces a month and a year back, and hides while searching"
     [dates.month]: entry(dates.month, { text: "One month back, a note about the garden." }),
     [dates.year]: entry(dates.year, { text: "One year back, a note about moving house." }),
   });
-  await page.getByRole("tab", { name: "Archive" }).click();
+  await page.getByRole("tab", { name: "Calendar" }).click();
 
   const onThisDay = page.locator(".on-this-day");
   await expect(onThisDay).toContainText("One month ago");
@@ -75,6 +83,12 @@ test("'on this day' surfaces a month and a year back, and hides while searching"
   await expect(onThisDay).toHaveCount(0);
 });
 
+/**
+ * A text-less day is not searchable — search matches words, and there are
+ * none here — but it is still on the calendar (as a dot) and still fully
+ * readable once opened. "Jump to a day" is the direct way in, the same way
+ * the calendar's own dot would be.
+ */
 test("a day with urges but no writing is still readable", async ({ page }) => {
   await seed(page, {
     "2026-03-20": entry("2026-03-20", {
@@ -83,10 +97,9 @@ test("a day with urges but no writing is still readable", async ({ page }) => {
       ],
     }),
   });
-  await page.getByRole("tab", { name: "Archive" }).click();
+  await page.getByRole("tab", { name: "Calendar" }).click();
+  await page.getByLabel("Jump to a day").fill("2026-03-20");
 
-  await expect(page.locator("button.entry")).toContainText("No entry — 1 urge logged.");
-  await page.locator("button.entry").click();
   const reader = page.getByRole("dialog", { name: "Entry" });
   await expect(reader.locator("textarea.editor")).toHaveAttribute(
     "placeholder",

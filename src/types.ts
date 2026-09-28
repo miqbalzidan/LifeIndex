@@ -43,7 +43,7 @@ export interface Task {
   doneOn: string | null;
 }
 
-export type Tab = "today" | "plan" | "archive" | "insights";
+export type Tab = "calendar" | "today" | "plan" | "insights";
 
 export interface Journal {
   /** Sparse: only days the user has actually touched. Keyed by `Day.date`. */

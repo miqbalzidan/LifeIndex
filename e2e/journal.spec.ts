@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { gotoToday } from "./support.ts";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
+  await gotoToday(page);
 });
 
 test("an entry survives a reload", async ({ page }) => {
@@ -11,6 +12,7 @@ test("an entry survives a reload", async ({ page }) => {
   await expect(page.locator(".word-count")).toHaveText("11 words");
 
   await page.reload();
+  await page.getByRole("tab", { name: "Today" }).click();
   await expect(page.locator("textarea.editor")).toHaveValue(entry);
 });
 
@@ -22,6 +24,7 @@ test("mood, energy, sleep and habits survive a reload", async ({ page }) => {
   await page.getByRole("button", { name: "Walk" }).click();
 
   await page.reload();
+  await page.getByRole("tab", { name: "Today" }).click();
 
   await expect(page.getByRole("radio", { name: "Mood 4 of 5" })).toHaveAttribute(
     "aria-checked",
@@ -55,11 +58,12 @@ test("skipping the prompt offers a different one, and remembers", async ({ page 
   expect(second).not.toBe(first);
 
   await page.reload();
+  await page.getByRole("tab", { name: "Today" }).click();
   await expect(prompt).toHaveText(second!);
 });
 
 test("a day that was only opened leaves nothing behind", async ({ page }) => {
-  await page.getByRole("tab", { name: "Archive" }).click();
+  await page.getByRole("tab", { name: "Calendar" }).click();
   await expect(page.locator("button.entry")).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem("nightly.journal.v1"))).toBeNull();
 });
@@ -76,6 +80,7 @@ test.describe("sleep is recorded, not assumed", () => {
     await expect(value).toContainText("7.5 h");
 
     await page.reload();
+    await page.getByRole("tab", { name: "Today" }).click();
     await expect(page.locator(".stepper-value")).toContainText("7.5 h");
   });
 
@@ -85,12 +90,11 @@ test.describe("sleep is recorded, not assumed", () => {
     await page.getByRole("tab", { name: "Insights" }).click();
     await expect(page.locator(".panel").last()).toContainText("Not enough nights recorded yet.");
 
-    // And the reader does not claim a night of seven hours either.
-    await page.getByRole("tab", { name: "Archive" }).click();
-    await page.locator("button.entry").click();
-    await expect(
-      page.getByRole("dialog", { name: "Entry" }).locator(".stepper-value")
-    ).toContainText("—");
+    // And today's own view does not claim a night of seven hours either —
+    // opening today from search lands back on Today, not in the reader, so
+    // there is no dialog here to check.
+    await page.getByRole("tab", { name: "Today" }).click();
+    await expect(page.locator(".stepper-value")).toContainText("—");
   });
 
   test("a recorded night does reach the chart", async ({ page }) => {

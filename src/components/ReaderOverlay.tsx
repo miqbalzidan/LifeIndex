@@ -13,7 +13,7 @@ interface ReaderOverlayProps {
 }
 
 /**
- * A past day, opened from the archive.
+ * A past day, opened from the calendar.
  *
  * It reads as a page rather than a form — the writing keeps the same serif at
  * the same size it has everywhere else — but it is the day itself, not a
@@ -33,7 +33,7 @@ export function ReaderOverlay({ day, journal, onClose, onEditUrge, onLogUrge }: 
     >
       <div className="reader-inner">
         <button type="button" className="reader-back" onClick={onClose}>
-          ← Archive
+          ← Calendar
         </button>
 
         <h1 className="reader-date">
