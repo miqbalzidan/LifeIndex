@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { entry, seed } from "./support.ts";
+import { entry, openUrgeSheet, seed } from "./support.ts";
 
 const reader = (page: Page) => page.getByRole("dialog", { name: "Entry" });
 
@@ -12,7 +12,7 @@ function as12Hour(value: string): string {
 const sheet = (page: Page) => page.getByRole("dialog", { name: /Log an urge|Edit urge/ });
 
 async function logUrge(page: Page, outcome: "Rode it out" | "Gave in", note: string) {
-  await page.getByRole("button", { name: "Log urge" }).click();
+  await openUrgeSheet(page);
   await page.getByRole("button", { name: "bored", exact: true }).click();
   await page.getByLabel("What was going on?").fill(note);
   await page.getByRole("button", { name: outcome, exact: true }).click();
@@ -53,6 +53,7 @@ test.describe("changing an urge already logged", () => {
     await expect(item).toContainText("what actually happened went to bed Gave in.");
 
     await page.reload();
+    await page.getByRole("tab", { name: "Today" }).click();
     await expect(page.locator(".timeline-item")).toContainText("Gave in.");
   });
 
@@ -89,16 +90,16 @@ test.describe("changing an urge already logged", () => {
   });
 
   test("deleting the only thing on a day takes the day out of the archive", async ({ page }) => {
-    await page.getByRole("tab", { name: "Archive" }).click();
-    await expect(page.locator("button.entry")).toHaveCount(1);
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    await expect(page.locator(".calendar-cell--today .calendar-dot")).toHaveCount(1);
 
     await page.getByRole("tab", { name: "Today" }).click();
     await page.locator(".timeline-item").click();
     await page.getByRole("button", { name: "Delete this urge" }).click();
     await page.getByRole("button", { name: "Delete", exact: true }).click();
 
-    await page.getByRole("tab", { name: "Archive" }).click();
-    await expect(page.locator("button.entry")).toHaveCount(0);
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    await expect(page.locator(".calendar-cell--today .calendar-dot")).toHaveCount(0);
   });
 
   test("only one of several urges is changed", async ({ page }) => {
@@ -125,17 +126,20 @@ test.describe("a past day is the day itself, not a printout of it", () => {
         ],
       }),
     });
-    await page.getByRole("tab", { name: "Archive" }).click();
-    await page.locator("button.entry").click();
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    await page.getByLabel("Jump to a day").fill("2026-03-20");
   });
 
   test("the writing can be corrected, and the archive follows", async ({ page }) => {
     await reader(page).locator("textarea.editor").fill("A typo I have now fixed.");
-    await page.getByRole("button", { name: "← Archive" }).click();
+    await page.getByRole("button", { name: "← Calendar" }).click();
 
+    await page.getByLabel("Search entries").fill("now fixed");
     await expect(page.locator("button.entry")).toContainText("A typo I have now fixed.");
+
     await page.reload();
-    await page.getByRole("tab", { name: "Archive" }).click();
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    await page.getByLabel("Search entries").fill("now fixed");
     await expect(page.locator("button.entry")).toContainText("A typo I have now fixed.");
   });
 
@@ -146,8 +150,8 @@ test.describe("a past day is the day itself, not a printout of it", () => {
     await reader(page).getByRole("button", { name: "Read", exact: true }).click();
 
     await page.reload();
-    await page.getByRole("tab", { name: "Archive" }).click();
-    await page.locator("button.entry").click();
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    await page.getByLabel("Jump to a day").fill("2026-03-20");
     await expect(reader(page).getByRole("radio", { name: "Mood 5 of 5" })).toHaveAttribute(
       "aria-checked",
       "true"
@@ -193,8 +197,8 @@ test.describe("a past day is the day itself, not a printout of it", () => {
 
     await expect(reader(page).locator(".timeline-item")).toHaveCount(0);
     await page.reload();
-    await page.getByRole("tab", { name: "Archive" }).click();
-    await page.locator("button.entry").click();
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    await page.getByLabel("Jump to a day").fill("2026-03-20");
     await expect(reader(page).locator(".timeline-item")).toHaveCount(0);
   });
 });

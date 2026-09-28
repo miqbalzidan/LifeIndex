@@ -620,7 +620,7 @@ input::placeholder {
   color: var(--ink-42);
 }
 
-/* --- archive -------------------------------------------------------------- */
+/* --- shared page furniture: title and search ------------------------------ */
 
 .page-head {
   padding: 38px 0 20px;
@@ -911,30 +911,32 @@ input::placeholder {
   margin-top: 26px;
 }
 
-/* --- archive: reaching a day that has nothing on it ----------------------- */
+/* --- calendar: jumping straight to a day, without scrolling to find it ---- */
 
+/* Kept close under the search field, on purpose: this used to sit at the foot
+   of the page, past a whole list of entries, which was the very thing that
+   made an old night hard to get to. */
 .reach {
-  margin-top: 46px;
-  padding-top: 22px;
-  border-top: 1px solid var(--ink-09);
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-top: 18px;
 }
 
-.reach-note {
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--ink-42);
-  margin-top: 10px;
-  max-width: 330px;
+.reach-label {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-40);
 }
 
 .reach-input {
-  display: block;
-  margin-top: 14px;
   background: none;
   border: 0;
   border-bottom: 1px solid var(--ink-14);
   outline: none;
-  padding: 7px 0;
+  padding: 4px 0;
   color: var(--ink-80);
   font-family: var(--mono);
   font-size: 13px;
@@ -943,6 +945,118 @@ input::placeholder {
 
 .reach-input:focus {
   border-bottom-color: var(--accent-50);
+}
+
+/* --- calendar: the month grid ---------------------------------------------- */
+
+.calendar {
+  margin-top: 30px;
+}
+
+.calendar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.calendar-month {
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 400;
+  color: var(--ink);
+}
+
+.calendar-nav {
+  background: none;
+  border: 0;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 16px;
+  color: var(--ink-58);
+}
+
+.calendar-nav:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.calendar-nav:disabled {
+  color: var(--ink-14);
+  cursor: default;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-top: 18px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--ink-09);
+}
+
+.calendar-weekdays span {
+  text-align: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--ink-30);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.calendar-cell {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-58);
+}
+
+.calendar-cell:hover:not(:disabled) {
+  background: var(--ink-06);
+  color: var(--ink);
+}
+
+.calendar-cell:disabled {
+  color: var(--ink-14);
+  cursor: default;
+}
+
+.calendar-cell--blank {
+  cursor: default;
+}
+
+/* Marks the one day that is neither past nor closed to you — not a reward for
+   anything, the same accent used everywhere else to mark state. */
+.calendar-cell--today {
+  background: var(--accent-16);
+  border: 1px solid var(--accent-60);
+  color: var(--accent-text);
+}
+
+/* A day holding something worth reading back — the same rule the entry list
+   and search use — gets a dot, nothing more. It says a day was recorded, not
+   what was on it, and it is the same dot whichever way an urge went. */
+.calendar-dot {
+  position: absolute;
+  bottom: 15%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.calendar-cell--today .calendar-dot {
+  background: var(--accent-text);
 }
 
 /* --- archive: getting a copy out, and back in ----------------------------- */
@@ -1446,23 +1560,62 @@ input::placeholder {
      never drifts into the middle of a wide viewport. */
   bottom: calc(88px + var(--safe-bottom));
   right: max(18px, calc(50% - 193px));
-  z-index: 50;
-  height: 44px;
-  padding: 0 17px;
-  border-radius: 24px;
+  z-index: 51;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
   cursor: pointer;
   background: var(--accent);
   color: var(--accent-on);
   border: none;
   font-family: var(--sans);
-  font-size: 14px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1;
   box-shadow: 0 8px 26px rgba(0, 0, 0, 0.55);
 }
 
 .fab:hover {
   background: var(--accent-lift);
+}
+
+/* An invisible catcher the size of the screen, so tapping anywhere outside
+   the two options closes them — the same dismissal every sheet in this app
+   already offers, without a second "cancel" button to state it. */
+.fab-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+}
+
+.fab-menu {
+  position: fixed;
+  bottom: calc(148px + var(--safe-bottom));
+  right: max(18px, calc(50% - 193px));
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  animation: riseIn 0.15s ease;
+}
+
+.fab-option {
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--ink-14);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.fab-option:hover {
+  border-color: var(--accent-50);
 }
 
 /* --- tab bar -------------------------------------------------------------- */

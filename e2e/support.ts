@@ -61,6 +61,27 @@ export async function seed(page: Page, days: Record<string, unknown>) {
   await page.goto("/");
 }
 
+/**
+ * Loads the app and switches straight to Today.
+ *
+ * Today used to be the landing screen; the calendar is now, so any test that
+ * wants Today's editor, prompt, or timeline in front of it has to ask.
+ */
+export async function gotoToday(page: Page) {
+  await page.goto("/");
+  await page.getByRole("tab", { name: "Today" }).click();
+}
+
+/**
+ * Opens the urge sheet for today, the replacement for a single tap on a
+ * "Log urge" button that no longer exists — the floating "+" now offers a
+ * choice, since it can open today's entry too.
+ */
+export async function openUrgeSheet(page: Page) {
+  await page.getByRole("button", { name: "Add an entry or an urge" }).click();
+  await page.getByRole("button", { name: "Urge", exact: true }).click();
+}
+
 /** `count` consecutive days ending today, each holding a written entry. */
 export async function seedRecentDays(page: Page, count: number, over: SeedDay = {}) {
   const days = await page.evaluate(

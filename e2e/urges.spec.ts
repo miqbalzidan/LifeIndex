@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { gotoToday, openUrgeSheet } from "./support.ts";
 
 test.beforeEach(async ({ page }) => {
-  await page.goto("/");
+  await gotoToday(page);
 });
 
 /** Fills in the sheet and closes it on `outcome`. */
@@ -10,7 +11,7 @@ async function logUrge(
   outcome: "Rode it out" | "Gave in",
   note = "scrolling at midnight"
 ) {
-  await page.getByRole("button", { name: "Log urge" }).click();
+  await openUrgeSheet(page);
   await page.getByRole("button", { name: "bored", exact: true }).click();
   await page.getByLabel("What was going on?").fill(note);
   await page.getByRole("button", { name: outcome, exact: true }).click();
@@ -25,6 +26,7 @@ test("a logged urge appears in tonight's timeline and survives a reload", async 
   await expect(item).toContainText("scrolling at midnight Rode it out.");
 
   await page.reload();
+  await page.getByRole("tab", { name: "Today" }).click();
   await expect(page.locator(".timeline-item")).toHaveCount(1);
 });
 
@@ -37,7 +39,7 @@ test("logging returns to Today, where the urge just appeared", async ({ page }) 
 });
 
 test("closing the sheet without saving records nothing", async ({ page }) => {
-  await page.getByRole("button", { name: "Log urge" }).click();
+  await openUrgeSheet(page);
   await page.getByRole("button", { name: "stressed", exact: true }).click();
   await page.getByRole("button", { name: "Close without saving" }).click();
 
@@ -48,8 +50,8 @@ test("closing the sheet without saving records nothing", async ({ page }) => {
 test("escape closes the sheet and hands focus back to the button that opened it", async ({
   page,
 }) => {
-  const fab = page.getByRole("button", { name: "Log urge" });
-  await fab.click();
+  const fab = page.getByRole("button", { name: "Add an entry or an urge" });
+  await openUrgeSheet(page);
   await expect(page.locator(".sheet")).toBeVisible();
 
   await page.keyboard.press("Escape");
@@ -75,7 +77,7 @@ test.describe("overlays keep the keyboard inside them", () => {
     page.evaluate((sel) => !!document.activeElement?.closest(sel), selector);
 
   test("tab and shift-tab both stay inside the urge sheet", async ({ page }) => {
-    await page.getByRole("button", { name: "Log urge" }).click();
+    await openUrgeSheet(page);
     await expect(page.locator(".sheet")).toBeVisible();
 
     for (let i = 0; i < 20; i++) {
@@ -89,9 +91,15 @@ test.describe("overlays keep the keyboard inside them", () => {
   });
 
   test("tab stays inside the entry reader", async ({ page }) => {
-    await page.locator("textarea.editor").fill("Something to read back.");
-    await page.getByRole("tab", { name: "Archive" }).click();
-    await page.locator("button.entry").click();
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    const yesterday = await page.evaluate(() => {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+        d.getDate()
+      ).padStart(2, "0")}`;
+    });
+    await page.getByLabel("Jump to a day").fill(yesterday);
     await expect(page.getByRole("dialog", { name: "Entry" })).toBeVisible();
 
     for (let i = 0; i < 8; i++) {

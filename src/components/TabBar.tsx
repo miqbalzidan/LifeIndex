@@ -1,9 +1,11 @@
 import type { Tab } from "../types.ts";
 
+// Calendar leads: it is the landing screen, since it is the fastest way to
+// either day you might want — today's, to write, or an old one, to read.
 const TABS: [key: Tab, name: string][] = [
+  ["calendar", "Calendar"],
   ["today", "Today"],
   ["plan", "Plan"],
-  ["archive", "Archive"],
   ["insights", "Insights"],
 ];
 

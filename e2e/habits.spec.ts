@@ -1,21 +1,25 @@
 import { expect, test, type Page } from "@playwright/test";
-import { entry, seed } from "./support.ts";
+import { entry, gotoToday, seed } from "./support.ts";
 
 const DEFAULTS = ["Walk", "Read", "No phone in bed", "Water"];
 
 const chips = (page: Page) => page.locator(".habits .habit");
 const openEditor = (page: Page) => page.getByRole("button", { name: /^edit/ }).click();
 
+// The habit row lives in DayEditor — on Today, or on a day opened from the
+// calendar. These tests reach it through Today, which used to be where every
+// test landed by default.
+
 test("a new journal starts with the default habits", async ({ page }) => {
-  await page.goto("/");
+  await gotoToday(page);
   await expect(chips(page)).toHaveText(DEFAULTS);
 });
 
 test("a habit you name is added, tickable, and still there after a reload", async ({ page }) => {
-  await page.goto("/");
+  await gotoToday(page);
   await openEditor(page);
   await page.getByLabel("Name a habit").fill("Cold shower");
-  await page.getByRole("button", { name: "Add" }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
 
   await expect(chips(page)).toHaveText([...DEFAULTS, "Cold shower"]);
 
@@ -26,6 +30,7 @@ test("a habit you name is added, tickable, and still there after a reload", asyn
   await expect(added).toHaveAttribute("aria-pressed", "true");
 
   await page.reload();
+  await page.getByRole("tab", { name: "Today" }).click();
   await expect(chips(page)).toHaveText([...DEFAULTS, "Cold shower"]);
   await expect(
     page.getByRole("button", { name: "Cold shower", exact: true })
@@ -33,23 +38,23 @@ test("a habit you name is added, tickable, and still there after a reload", asyn
 });
 
 test("names are tidied on the way in", async ({ page }) => {
-  await page.goto("/");
+  await gotoToday(page);
   await openEditor(page);
   await page.getByLabel("Name a habit").fill("   cold   shower   ");
-  await page.getByRole("button", { name: "Add" }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
 
   await expect(chips(page).last()).toHaveText("cold shower");
 });
 
 test.describe("a habit it will not add", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
+    await gotoToday(page);
     await openEditor(page);
   });
 
   test("says so for one already on the list, whatever the case", async ({ page }) => {
     await page.getByLabel("Name a habit").fill("walk");
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
 
     await expect(page.locator(".habit-error")).toHaveText("That one is already here.");
     await expect(chips(page)).toHaveText(DEFAULTS);
@@ -57,7 +62,7 @@ test.describe("a habit it will not add", () => {
 
   test("says so for a blank name", async ({ page }) => {
     await page.getByLabel("Name a habit").fill("   ");
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
 
     await expect(page.locator(".habit-error")).toHaveText("Give the habit a name.");
     await expect(chips(page)).toHaveText(DEFAULTS);
@@ -65,7 +70,7 @@ test.describe("a habit it will not add", () => {
 
   test("clears the complaint once you start typing again", async ({ page }) => {
     await page.getByLabel("Name a habit").fill("walk");
-    await page.getByRole("button", { name: "Add" }).click();
+    await page.getByRole("button", { name: "Add", exact: true }).click();
     await expect(page.locator(".habit-error")).toBeVisible();
 
     await page.getByLabel("Name a habit").fill("walking");
@@ -74,12 +79,13 @@ test.describe("a habit it will not add", () => {
 });
 
 test("a habit you remove goes from the row", async ({ page }) => {
-  await page.goto("/");
+  await gotoToday(page);
   await openEditor(page);
   await page.getByRole("button", { name: "remove Read" }).click();
 
   await expect(chips(page)).toHaveText(["Walk", "No phone in bed", "Water"]);
   await page.reload();
+  await page.getByRole("tab", { name: "Today" }).click();
   await expect(chips(page)).toHaveText(["Walk", "No phone in bed", "Water"]);
 });
 
@@ -91,15 +97,16 @@ test("a removed habit still shows on a day that had already ticked it", async ({
   await seed(page, {
     "2026-03-20": entry("2026-03-20", { text: "A day at the gym.", habits: ["Walk", "Gym"] }),
   });
+  await page.getByRole("tab", { name: "Today" }).click();
 
   await openEditor(page);
   await page.getByLabel("Name a habit").fill("Gym");
-  await page.getByRole("button", { name: "Add" }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   await page.getByRole("button", { name: "remove Gym" }).click();
   await expect(chips(page)).toHaveText(DEFAULTS);
 
-  await page.getByRole("tab", { name: "Archive" }).click();
-  await page.locator("button.entry").click();
+  await page.getByRole("tab", { name: "Calendar" }).click();
+  await page.getByLabel("Jump to a day").fill("2026-03-20");
 
   const reader = page.getByRole("dialog", { name: "Entry" });
   await expect(reader.locator(".habit")).toHaveText([...DEFAULTS, "Gym"]);
@@ -113,13 +120,13 @@ test("habits travel with an exported copy, and merge on the way back in", async 
   page,
   browser,
 }) => {
-  await page.goto("/");
+  await gotoToday(page);
   await openEditor(page);
   await page.getByLabel("Name a habit").fill("Cold shower");
-  await page.getByRole("button", { name: "Add" }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   await page.locator("textarea.editor").fill("So the file has a day in it.");
 
-  await page.getByRole("tab", { name: "Archive" }).click();
+  await page.getByRole("tab", { name: "Calendar" }).click();
   const [download] = await Promise.all([
     page.waitForEvent("download"),
     page.getByRole("button", { name: "Export a copy" }).click(),
@@ -137,12 +144,12 @@ test("habits travel with an exported copy, and merge on the way back in", async 
   // A second device, with a habit of its own the file has not heard of.
   const other = await browser.newContext({ baseURL: test.info().project.use.baseURL! });
   const second = await other.newPage();
-  await second.goto("/");
+  await gotoToday(second);
   await second.getByRole("button", { name: /^edit/ }).click();
   await second.getByLabel("Name a habit").fill("Stretch");
-  await second.getByRole("button", { name: "Add" }).click();
+  await second.getByRole("button", { name: "Add", exact: true }).click();
 
-  await second.getByRole("tab", { name: "Archive" }).click();
+  await second.getByRole("tab", { name: "Calendar" }).click();
   await second.getByRole("button", { name: "Import a copy" }).click();
   await second.locator('input[type="file"]').setInputFiles({
     name: "nightly-backup.json",
@@ -159,7 +166,7 @@ test("habits travel with an exported copy, and merge on the way back in", async 
 });
 
 test("the habit editor keeps to the app's typography — no icons", async ({ page }) => {
-  await page.goto("/");
+  await gotoToday(page);
   await openEditor(page);
 
   await expect(page.locator(".habit-editor")).toBeVisible();

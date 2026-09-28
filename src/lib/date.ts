@@ -105,3 +105,32 @@ export function fromTimeInput(value: string): number | null {
   if (hours > 23 || minutes > 59) return null;
   return hours * 60 + minutes;
 }
+
+/**
+ * The calendar's own local grid.
+ *
+ * Deliberately not just Date.getDay() splashed across a template: the whole
+ * point of this file is that a UTC shortcut here would drift a date under the
+ * wrong day for someone west of Greenwich, the same as everywhere else.
+ */
+
+/** One full month, Sunday first, as a flat 7-wide grid padded with `null`. */
+export function monthGrid(year: number, month: number): (string | null)[] {
+  const leadingBlanks = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const cells: (string | null)[] = new Array(leadingBlanks).fill(null);
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push(toIso(new Date(year, month, day)));
+  }
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
+}
+
+/** "September 2026" for the first of that month. */
+export function formatMonthLabel(year: number, month: number): string {
+  return new Date(year, month, 1).toLocaleDateString(undefined, {
+    month: "long",
+    year: "numeric",
+  });
+}

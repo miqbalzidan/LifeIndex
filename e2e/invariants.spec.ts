@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { seedRecentDays } from "./support.ts";
+import { openUrgeSheet, seedRecentDays } from "./support.ts";
 
 /**
  * The constraints from the brief, as tests.
@@ -73,7 +73,7 @@ async function redsOnPage(page: Page): Promise<string[]> {
 test.describe("the two urge outcomes carry equal weight", () => {
   test("both buttons are the same size and the same colour", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Log urge" }).click();
+    await openUrgeSheet(page);
 
     const rode = page.getByRole("button", { name: "Rode it out", exact: true });
     const gave = page.getByRole("button", { name: "Gave in", exact: true });
@@ -100,7 +100,7 @@ test.describe("the two urge outcomes carry equal weight", () => {
 
   test("the same is true of the sheet opened to edit an urge", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Log urge" }).click();
+    await openUrgeSheet(page);
     await page.getByRole("button", { name: "Gave in", exact: true }).click();
     await page.locator(".timeline-item").click();
     await expect(page.locator(".sheet-title")).toHaveText("Edit urge");
@@ -134,7 +134,7 @@ test.describe("the two urge outcomes carry equal weight", () => {
     });
     expect(await redsOnPage(page), "today").toEqual([]);
 
-    await page.getByRole("button", { name: "Log urge" }).click();
+    await openUrgeSheet(page);
     expect(await redsOnPage(page), "urge sheet").toEqual([]);
 
     await page.getByRole("button", { name: "Gave in", exact: true }).click();
@@ -145,7 +145,9 @@ test.describe("the two urge outcomes carry equal weight", () => {
     await expect(page.locator(".headline-value")).toBeVisible();
     expect(await redsOnPage(page), "insights, with every chart drawn").toEqual([]);
 
-    await page.getByRole("tab", { name: "Archive" }).click();
+    await page.getByRole("tab", { name: "Calendar" }).click();
+    expect(await redsOnPage(page), "calendar, with the month grid drawn").toEqual([]);
+    await page.getByLabel("Search entries").fill("days ago");
     await page.locator("button.entry").first().click();
     expect(await redsOnPage(page), "reader, after giving in").toEqual([]);
   });
@@ -186,7 +188,7 @@ test.describe("clean days is a share, never a streak", () => {
     const before = Number(await page.locator(".headline-value").textContent());
 
     await page.getByRole("tab", { name: "Today" }).click();
-    await page.getByRole("button", { name: "Log urge" }).click();
+    await openUrgeSheet(page);
     await page.getByRole("button", { name: "Gave in", exact: true }).click();
 
     await page.getByRole("tab", { name: "Insights" }).click();
@@ -198,7 +200,7 @@ test.describe("clean days is a share, never a streak", () => {
     const banned =
       /\bstreak of\b|\bday streak\b|\bin a row\b|🔥|\bbadge|\bXP\b|level up|congratulat|well done|keep it up|you're on|don't break/i;
 
-    for (const tab of ["Today", "Plan", "Archive", "Insights"] as const) {
+    for (const tab of ["Calendar", "Today", "Plan", "Insights"] as const) {
       await page.getByRole("tab", { name: tab }).click();
       expect(await appVoice(page), tab).not.toMatch(banned);
     }
@@ -226,10 +228,15 @@ test("empty states say what a page is for and nothing about missing days", async
   const scolding =
     /missed|missing|haven't|have not|didn't|did not|no entries in|behind|catch up|get back|last logged|days ago|since you/i;
 
-  await page.getByRole("tab", { name: "Archive" }).click();
+  await page.getByRole("tab", { name: "Calendar" }).click();
+  // The calendar grid rests wordless; the empty-state text only shows up once a
+  // search comes back with nothing to show, since that is the one place the
+  // page has to say anything about what is (or isn't) there.
+  await page.getByLabel("Search entries").fill("anything");
   await expect(page.locator(".entries-empty")).toHaveText(
     "Nothing here yet. What you write will collect on this page."
   );
+  await page.getByLabel("Search entries").fill("");
 
   await page.getByRole("tab", { name: "Insights" }).click();
   await expect(page.locator(".panel-empty")).toHaveText([
@@ -238,7 +245,7 @@ test("empty states say what a page is for and nothing about missing days", async
     "Not enough nights recorded yet.",
   ]);
 
-  for (const tab of ["Today", "Plan", "Archive", "Insights"] as const) {
+  for (const tab of ["Calendar", "Today", "Plan", "Insights"] as const) {
     await page.getByRole("tab", { name: tab }).click();
     expect(await appVoice(page), tab).not.toMatch(scolding);
   }
@@ -248,15 +255,32 @@ test("navigation is typographic — there are no icons in the app", async ({ pag
   await page.goto("/");
 
   await expect(page.locator(".tabbar svg, .tabbar img, .tabbar canvas")).toHaveCount(0);
-  await expect(page.getByRole("tab")).toHaveText(["Today", "Plan", "Archive", "Insights"]);
+  await expect(page.getByRole("tab")).toHaveText(["Calendar", "Today", "Plan", "Insights"]);
+
+  // The calendar's own furniture — month nav, weekday letters, day cells — is
+  // all text too, same as the "+" that opens the FAB.
+  await expect(page.locator(".calendar svg, .calendar img, .calendar canvas")).toHaveCount(0);
+  await expect(page.locator(".fab svg, .fab img, .fab canvas")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Previous month" })).toHaveText("‹");
+  await expect(page.getByRole("button", { name: "Next month" })).toHaveText("›");
 
   // The only <svg> in the app is the mood chart, which is a chart, not an icon.
   await page.getByRole("tab", { name: "Insights" }).click();
   await expect(page.locator("img")).toHaveCount(0);
 });
 
+test("the FAB's picker introduces no icons", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add an entry or an urge" }).click();
+
+  await expect(page.locator(".fab-menu svg, .fab-menu img, .fab-menu canvas")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Entry", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Urge", exact: true })).toBeVisible();
+});
+
 test("one accent colour, used only to mark state", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("tab", { name: "Today" }).click();
 
   const accent = await page.evaluate(() =>
     getComputedStyle(document.documentElement).getPropertyValue("--accent").trim()
